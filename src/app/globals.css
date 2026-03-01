@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-destructive: var(--destructive);
+  --color-decrease: var(--decrease);
+  --color-increase: var(--increase);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --font-sans: var(--font-roboto-condensed), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-libre-baskerville), Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, monospace;
+}
+
+:root {
+  --radius: 0.375rem;
+
+  /* LSJA Brand */
+  --primary: #2C1A6B;
+  --primary-foreground: #ffffff;
+  --accent: #7C3AED;
+
+  /* Surfaces */
+  --background: #faf9f6;
+  --foreground: #1a1a1a;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --muted: #f5f5f0;
+  --muted-foreground: #6b7280;
+
+  /* Borders */
+  --border: #e8e8e8;
+  --border-strong: #d4d4d4;
+
+  /* Semantic (public safety convention: red = bad/increase, blue = good/decrease) */
+  --destructive: #dc2626;
+  --increase: #dc2626;
+  --decrease: #2563eb;
+
+  /* Chart palette — purple gradient + categorical */
+  --chart-1: #2C1A6B;
+  --chart-2: #7C3AED;
+  --chart-3: #2B5CE6;
+  --chart-4: #D4A900;
+  --chart-5: #dc2626;
+  --chart-6: #65bc7b;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
+}
+
+/* Utility classes */
+.font-serif {
+  font-family: var(--font-serif);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
