@@ -17,11 +17,21 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          lfs: true
 
-      - name: Pull LFS files
-        run: git lfs pull
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Download source files from OneDrive
+        run: npx tsx scripts/download-sharepoint-files.ts
+        env:
+          SHAREPOINT_TENANT_ID: ${{ secrets.SHAREPOINT_TENANT_ID }}
+          SHAREPOINT_CLIENT_ID: ${{ secrets.SHAREPOINT_CLIENT_ID }}
+          SHAREPOINT_CLIENT_SECRET: ${{ secrets.SHAREPOINT_CLIENT_SECRET }}
+          SHAREPOINT_DRIVE_ID: ${{ secrets.SHAREPOINT_DRIVE_ID }}
 
       - uses: actions/setup-python@v5
         with:
@@ -32,13 +42,6 @@ jobs:
 
       - name: Download & prepare incidents Parquet
         run: python scripts/prepare-incidents-parquet.py
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - run: npm ci
 
       - name: Run ETL pipelines
         run: npm run refresh-data

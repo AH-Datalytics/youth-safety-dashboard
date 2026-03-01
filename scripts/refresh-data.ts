@@ -11,6 +11,7 @@ import { run311ETL } from "./etl-311";
 import { runCFSETL } from "./etl-cfs";
 import { runCampusETL } from "./etl-campus";
 import { runTJJDETL } from "./etl-tjjd";
+import { computeOverviewSummary } from "./compute-overview-summary";
 
 const OUTPUT_DIR = path.join(process.cwd(), "data", "generated");
 
@@ -99,6 +100,17 @@ async function main() {
   if (failed.length > 0) {
     console.error(`\n${failed.length} ETL(s) failed!`);
     process.exit(1);
+  }
+
+  // Compute overview summary for homepage
+  console.log("\n--- Overview Summary ---");
+  try {
+    const summary = computeOverviewSummary();
+    writeOutput("overview-summary", summary);
+    console.log("  [overview-summary] OK");
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error(`  [overview-summary] FAILED: ${msg}`);
   }
 
   console.log("\nAll ETLs completed successfully.");

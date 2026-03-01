@@ -1,3 +1,0 @@
-*.xlsx filter=lfs diff=lfs merge=lfs -text
-*.parquet filter=lfs diff=lfs merge=lfs -text
-data/source/*.csv filter=lfs diff=lfs merge=lfs -text

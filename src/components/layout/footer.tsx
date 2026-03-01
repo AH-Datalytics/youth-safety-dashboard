@@ -1,12 +1,19 @@
 export function Footer() {
   return (
-    <footer className="bg-muted border-t border-border py-4 px-4 text-center">
-      <p className="text-xs text-muted-foreground">
-        Powered by{" "}
-        <span className="font-semibold text-foreground">AH Datalytics</span>
+    <footer className="border-t border-[#d4d4d4] bg-white py-4 px-4 text-center">
+      <p className="text-xs text-[#666]">
+        Built for the{" "}
+        <span className="font-semibold text-primary">Lone Star Justice Alliance</span>
         {" "}&middot;{" "}
-        Data provided by the{" "}
-        <span className="font-semibold text-foreground">Lone Star Justice Alliance</span>
+        Powered by{" "}
+        <a
+          href="https://ahdatalytics.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold text-primary hover:underline"
+        >
+          AH Datalytics
+        </a>
       </p>
     </footer>
   );
