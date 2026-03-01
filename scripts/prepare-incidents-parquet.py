@@ -237,6 +237,42 @@ def main():
     size_mb = os.path.getsize(OUTPUT_FILE) / (1024 * 1024)
     print(f"  Wrote: {OUTPUT_FILE} ({size_mb:.1f} MB)")
 
+    # Also output a lightweight CSV for the TypeScript ETL
+    # (avoids re-downloading 850MB+ in the TS pipeline)
+    etl_csv = OUTPUT_DIR / "_incidents-etl.csv"
+    etl_cols = {
+        "date": "Date1 of Occurrence",
+        "offense": pick_col(["Offense_Incident", "offincident", "Offense Incident"], cols),
+        "category": pick_col(["NIBRS Crime Category", "nibrs_crime_category"], cols),
+        "district": pick_col(["Division", "district", "District"], cols),
+        "zip": pick_col(["Zip Code", "zip_code"], cols),
+        "nibrs": pick_col(["NIBRS Crime", "nibrs_crime"], cols),
+    }
+
+    # Read from the original CSV (before column renaming), filter 2017+
+    df_orig = pd.read_csv(tmp_csv, low_memory=False)
+    date_col = pick_col(["Date1 of Occurrence", "date1", "Date1"], list(df_orig.columns))
+    if date_col:
+        df_orig["_date"] = pd.to_datetime(df_orig[date_col], errors="coerce", utc=True)
+        df_orig = df_orig[df_orig["_date"] >= pd.Timestamp(DATE_FLOOR, tz="UTC")]
+        df_orig["_date_str"] = df_orig["_date"].dt.strftime("%Y-%m-%d")
+
+        etl_df = pd.DataFrame()
+        etl_df["date"] = df_orig["_date_str"]
+        for out_name, src_col in etl_cols.items():
+            if out_name == "date":
+                continue
+            if src_col and src_col in df_orig.columns:
+                etl_df[out_name] = df_orig[src_col].fillna("").astype(str).str.strip()
+            else:
+                etl_df[out_name] = ""
+
+        etl_df.to_csv(etl_csv, index=False)
+        etl_size_mb = os.path.getsize(etl_csv) / (1024 * 1024)
+        print(f"  Wrote ETL CSV: {etl_csv} ({etl_size_mb:.1f} MB, {len(etl_df):,} rows)")
+    else:
+        print("  WARNING: Could not write ETL CSV (no date column found)")
+
     # Cleanup temp CSV
     if tmp_csv.exists():
         tmp_csv.unlink()

@@ -39,6 +39,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Source data (downloaded from SharePoint at runtime)
+# Source data (downloaded from OneDrive at runtime)
 data/source/
 data/crosswalks/
+
+# Temp files from ETL
+data/generated/_*

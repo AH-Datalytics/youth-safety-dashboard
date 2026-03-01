@@ -1,91 +1,157 @@
 /**
  * ETL: Dallas Police Incidents (Socrata)
- * Source: https://www.dallasopendata.com/resource/qv6i-rri7
+ * Source: data/generated/_incidents-etl.csv (from Python) or Socrata bulk CSV
  * Output: data/generated/incidents-data.json(.gz)
+ *
+ * Prefers reading from the Python-generated ETL CSV (fast, already downloaded).
+ * Falls back to Socrata JSON pagination if the CSV doesn't exist.
  */
+import fs from "fs";
+import path from "path";
+import { Readable } from "stream";
+import Papa from "papaparse";
 import type { IncidentPayload, IncidentRecord } from "../src/lib/types/incidents";
 
-const ENDPOINT = "https://www.dallasopendata.com/resource/qv6i-rri7.json";
+const ETL_CSV = path.join(process.cwd(), "data", "generated", "_incidents-etl.csv");
+const SOCRATA_CSV_URL = "https://www.dallasopendata.com/api/views/qv6i-rri7/rows.csv?accessType=DOWNLOAD";
+const SOCRATA_JSON_URL = "https://www.dallasopendata.com/resource/qv6i-rri7.json";
+const DATA_FLOOR = "2017-01-01";
 const PAGE_SIZE = 50_000;
 const MAX_RECORDS = 2_000_000;
-const DATA_FLOOR = "2017-01-01T00:00:00";
-
-interface SocrataIncident {
-  date1: string;
-  offincident: string;
-  nibrs_crime_category?: string;
-  nibrs_crime?: string;
-  district?: string;
-  zip_code?: string;
-  [key: string]: unknown;
-}
 
 export async function runIncidentsETL(): Promise<IncidentPayload> {
-  console.log("[incidents-etl] Fetching from Socrata...");
-
-  const allRecords: SocrataIncident[] = [];
-  let offset = 0;
-
-  while (offset < MAX_RECORDS) {
-    const url = `${ENDPOINT}?$where=date1>='${DATA_FLOOR}'&$limit=${PAGE_SIZE}&$offset=${offset}&$order=date1 DESC`;
-    console.log(`[incidents-etl] Fetching offset=${offset}...`);
-
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Socrata ${res.status}: ${res.statusText}`);
-    const batch: SocrataIncident[] = await res.json();
-
-    if (batch.length === 0) break;
-    allRecords.push(...batch);
-    offset += batch.length;
-
-    if (batch.length < PAGE_SIZE) break;
+  if (fs.existsSync(ETL_CSV)) {
+    return runFromCSV(ETL_CSV);
   }
+  console.log("[incidents-etl] No ETL CSV found, falling back to Socrata API...");
+  return runFromSocrataJSON();
+}
 
-  console.log(`[incidents-etl] Fetched ${allRecords.length.toLocaleString()} records`);
+/**
+ * Fast path: read from Python-generated CSV (6 columns, pre-filtered).
+ */
+async function runFromCSV(csvPath: string): Promise<IncidentPayload> {
+  console.log(`[incidents-etl] Reading from ${path.basename(csvPath)}...`);
 
-  // Aggregate to daily counts
-  const aggMap = new Map<string, { rec: IncidentRecord; count: number }>();
+  const aggMap = new Map<string, number>();
   const offenseTypeSet = new Set<string>();
   const categorySet = new Set<string>();
   const districtSet = new Set<string>();
   const zipSet = new Set<string>();
   const nibrsSet = new Set<string>();
   let maxDate = "";
+  let totalRows = 0;
 
-  for (const raw of allRecords) {
-    if (!raw.date1) continue;
-    const date = raw.date1.substring(0, 10); // YYYY-MM-DD
-    const offenseType = raw.offincident?.trim() || "Unknown";
-    const category = raw.nibrs_crime_category?.trim() || "Unknown";
-    const district = raw.district?.trim() || "";
-    const zip = raw.zip_code?.trim() || "";
-    const nibrs = raw.nibrs_crime?.trim() || "";
+  await new Promise<void>((resolve, reject) => {
+    const readStream = fs.createReadStream(csvPath, { encoding: "utf-8" });
+    Papa.parse(readStream, {
+      header: true,
+      skipEmptyLines: true,
+      step: (result) => {
+        totalRows++;
+        const row = result.data as Record<string, string>;
+        const date = row.date;
+        if (!date || date < DATA_FLOOR) return;
 
-    offenseTypeSet.add(offenseType);
-    categorySet.add(category);
-    if (district) districtSet.add(district);
-    if (zip) zipSet.add(zip);
-    if (nibrs) nibrsSet.add(nibrs);
-    if (date > maxDate) maxDate = date;
+        const offenseType = row.offense?.trim() || "Unknown";
+        const category = row.category?.trim() || "Unknown";
+        const district = row.district?.trim() || "";
+        const zip = row.zip?.trim() || "";
+        const nibrs = row.nibrs?.trim() || "";
 
-    const key = `${date}|${offenseType}|${category}|${district}|${zip}|${nibrs}`;
-    const existing = aggMap.get(key);
-    if (existing) {
-      existing.count++;
-    } else {
-      aggMap.set(key, {
-        rec: { d: date, ot: offenseType, ca: category, di: district, zi: zip, n: nibrs, c: 1 },
-        count: 1,
-      });
+        offenseTypeSet.add(offenseType);
+        categorySet.add(category);
+        if (district) districtSet.add(district);
+        if (zip) zipSet.add(zip);
+        if (nibrs) nibrsSet.add(nibrs);
+        if (date > maxDate) maxDate = date;
+
+        const key = `${date}|${offenseType}|${category}|${district}|${zip}|${nibrs}`;
+        aggMap.set(key, (aggMap.get(key) ?? 0) + 1);
+
+        if (totalRows % 100_000 === 0) {
+          console.log(`[incidents-etl] Processed ${totalRows.toLocaleString()} rows...`);
+        }
+      },
+      complete: () => resolve(),
+      error: (err) => reject(err),
+    });
+  });
+
+  console.log(`[incidents-etl] Parsed ${totalRows.toLocaleString()} rows from CSV`);
+  return buildPayload(aggMap, offenseTypeSet, categorySet, districtSet, zipSet, nibrsSet, maxDate);
+}
+
+/**
+ * Fallback: paginated JSON from Socrata API (slow for large datasets).
+ */
+async function runFromSocrataJSON(): Promise<IncidentPayload> {
+  console.log("[incidents-etl] Fetching from Socrata JSON API...");
+
+  const aggMap = new Map<string, number>();
+  const offenseTypeSet = new Set<string>();
+  const categorySet = new Set<string>();
+  const districtSet = new Set<string>();
+  const zipSet = new Set<string>();
+  const nibrsSet = new Set<string>();
+  let maxDate = "";
+  let totalFetched = 0;
+  let offset = 0;
+
+  while (offset < MAX_RECORDS) {
+    const url = `${SOCRATA_JSON_URL}?$where=date1>='${DATA_FLOOR}T00:00:00'&$limit=${PAGE_SIZE}&$offset=${offset}&$order=date1 DESC`;
+    console.log(`[incidents-etl] Fetching offset=${offset}...`);
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Socrata ${res.status}: ${res.statusText}`);
+    const batch = await res.json() as Array<Record<string, string>>;
+
+    if (batch.length === 0) break;
+    totalFetched += batch.length;
+
+    for (const raw of batch) {
+      if (!raw.date1) continue;
+      const date = raw.date1.substring(0, 10);
+      const offenseType = raw.offincident?.trim() || "Unknown";
+      const category = raw.nibrs_crime_category?.trim() || "Unknown";
+      const district = raw.district?.trim() || "";
+      const zip = raw.zip_code?.trim() || "";
+      const nibrs = raw.nibrs_crime?.trim() || "";
+
+      offenseTypeSet.add(offenseType);
+      categorySet.add(category);
+      if (district) districtSet.add(district);
+      if (zip) zipSet.add(zip);
+      if (nibrs) nibrsSet.add(nibrs);
+      if (date > maxDate) maxDate = date;
+
+      const key = `${date}|${offenseType}|${category}|${district}|${zip}|${nibrs}`;
+      aggMap.set(key, (aggMap.get(key) ?? 0) + 1);
     }
+
+    offset += batch.length;
+    if (batch.length < PAGE_SIZE) break;
   }
 
-  const records: IncidentRecord[] = Array.from(aggMap.values()).map(({ rec, count }) => ({
-    ...rec,
-    c: count,
-  }));
+  console.log(`[incidents-etl] Fetched ${totalFetched.toLocaleString()} records from Socrata`);
+  return buildPayload(aggMap, offenseTypeSet, categorySet, districtSet, zipSet, nibrsSet, maxDate);
+}
 
-  // Compute YTD
+function buildPayload(
+  aggMap: Map<string, number>,
+  offenseTypeSet: Set<string>,
+  categorySet: Set<string>,
+  districtSet: Set<string>,
+  zipSet: Set<string>,
+  nibrsSet: Set<string>,
+  maxDate: string,
+): IncidentPayload {
+  const records: IncidentRecord[] = [];
+  for (const [key, count] of aggMap) {
+    const [d, ot, ca, di, zi, n] = key.split("|");
+    records.push({ d, ot, ca, di, zi, n, c: count });
+  }
+
   const now = new Date();
   const currentYear = now.getFullYear();
   const priorYear = currentYear - 1;
