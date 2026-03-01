@@ -40,8 +40,11 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r scripts/requirements.txt
 
-      - name: Download & prepare incidents Parquet
+      - name: Download & prepare incidents Parquet + ETL CSV
         run: python scripts/prepare-incidents-parquet.py
+
+      - name: Convert CFS Excel to CSVs
+        run: python scripts/prepare-cfs-csv.py
 
       - name: Run ETL pipelines
         run: npm run refresh-data

@@ -45,3 +45,10 @@ data/crosswalks/
 
 # Temp files from ETL
 data/generated/_*
+
+# Uncompressed JSON (too large for GitHub, only .json.gz needed)
+data/generated/*.json
+!data/generated/.gitkeep
+
+# Parquet files (generated at CI time)
+data/generated/*.parquet
