@@ -11,12 +11,12 @@ const MAX_RECORDS = 2_000_000;
 const DATA_FLOOR = "2020-01-01T00:00:00";
 
 interface Socrata311 {
-  open_date?: string;
+  created_date?: string;
   service_request_type?: string;
-  responsible_department?: string;
-  case_status?: string;
-  council_district?: string;
-  zip?: string;
+  department?: string;
+  status?: string;
+  city_council_district?: string;
+  address?: string;
   [key: string]: unknown;
 }
 
@@ -40,7 +40,7 @@ export async function run311ETL(): Promise<Request311Payload> {
   let offset = 0;
 
   while (offset < MAX_RECORDS) {
-    const url = `${ENDPOINT}?$where=open_date>='${DATA_FLOOR}'&$limit=${PAGE_SIZE}&$offset=${offset}&$order=open_date DESC`;
+    const url = `${ENDPOINT}?$where=created_date>='${DATA_FLOOR}'&$limit=${PAGE_SIZE}&$offset=${offset}&$order=created_date DESC`;
     console.log(`[311-etl] Fetching offset=${offset}...`);
 
     const res = await fetch(url);
@@ -67,13 +67,15 @@ export async function run311ETL(): Promise<Request311Payload> {
   let maxDate = "";
 
   for (const raw of allRecords) {
-    if (!raw.open_date) continue;
-    const date = raw.open_date.substring(0, 10);
+    if (!raw.created_date) continue;
+    const date = raw.created_date.substring(0, 10);
     const requestType = cleanRequestType(raw.service_request_type);
-    const department = cleanDepartment(raw.responsible_department);
-    const status = raw.case_status?.trim() || "Unknown";
-    const district = raw.council_district?.trim() || "";
-    const zip = raw.zip?.trim() || "";
+    const department = cleanDepartment(raw.department);
+    const status = raw.status?.trim() || "Unknown";
+    const district = raw.city_council_district?.trim() || "";
+    // Extract zip from address (e.g. "123 MAIN ST, DALLAS, TX, 75201")
+    const zipMatch = raw.address?.match(/\b(\d{5})\s*$/);
+    const zip = zipMatch ? zipMatch[1] : "";
 
     requestTypeSet.add(requestType);
     departmentSet.add(department);

@@ -15,7 +15,7 @@ interface SocrataIncident {
   offincident: string;
   nibrs_crime_category?: string;
   nibrs_crime?: string;
-  compstat_council_district?: string;
+  district?: string;
   zip_code?: string;
   [key: string]: unknown;
 }
@@ -57,7 +57,7 @@ export async function runIncidentsETL(): Promise<IncidentPayload> {
     const date = raw.date1.substring(0, 10); // YYYY-MM-DD
     const offenseType = raw.offincident?.trim() || "Unknown";
     const category = raw.nibrs_crime_category?.trim() || "Unknown";
-    const district = raw.compstat_council_district?.trim() || "";
+    const district = raw.district?.trim() || "";
     const zip = raw.zip_code?.trim() || "";
     const nibrs = raw.nibrs_crime?.trim() || "";
 

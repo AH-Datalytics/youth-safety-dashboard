@@ -10,12 +10,13 @@ const PAGE_SIZE = 50_000;
 const MAX_RECORDS = 500_000;
 
 interface SocrataArrest {
-  arrestdate?: string;
-  charge_description?: string;
+  ararrestdate?: string;
+  araction?: string;
   race?: string;
   sex?: string;
   age?: string;
-  councildist?: string;
+  arldistrict?: string;
+  arlzip?: string;
   [key: string]: unknown;
 }
 
@@ -50,7 +51,7 @@ export async function runArrestsETL(): Promise<ArrestPayload> {
   let offset = 0;
 
   while (offset < MAX_RECORDS) {
-    const url = `${ENDPOINT}?$limit=${PAGE_SIZE}&$offset=${offset}&$order=arrestdate DESC`;
+    const url = `${ENDPOINT}?$limit=${PAGE_SIZE}&$offset=${offset}&$order=ararrestdate DESC`;
     console.log(`[arrests-etl] Fetching offset=${offset}...`);
 
     const res = await fetch(url);
@@ -77,13 +78,13 @@ export async function runArrestsETL(): Promise<ArrestPayload> {
   let maxDate = "";
 
   for (const raw of allRecords) {
-    if (!raw.arrestdate) continue;
-    const date = raw.arrestdate.substring(0, 10);
-    const charge = raw.charge_description?.trim() || "Unknown";
+    if (!raw.ararrestdate) continue;
+    const date = raw.ararrestdate.substring(0, 10);
+    const charge = raw.araction?.trim() || "Unknown";
     const race = cleanRace(raw.race);
     const sex = cleanSex(raw.sex);
     const ageGroup = ageGroupBin(raw.age);
-    const district = raw.councildist?.trim() || "";
+    const district = raw.arldistrict?.trim() || "";
 
     chargeSet.add(charge);
     raceSet.add(race);
