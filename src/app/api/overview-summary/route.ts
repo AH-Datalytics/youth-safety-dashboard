@@ -5,8 +5,8 @@ import zlib from "zlib";
 
 export async function GET() {
   try {
-    const gzPath = path.join(process.cwd(), "data", "generated", "overview-summary.json.gz");
-    const jsonPath = path.join(process.cwd(), "data", "generated", "overview-summary.json");
+    const gzPath = path.join(process.cwd(), "data", "generated", "overview-summary-data.json.gz");
+    const jsonPath = path.join(process.cwd(), "data", "generated", "overview-summary-data.json");
 
     if (fs.existsSync(gzPath)) {
       const raw = zlib.gunzipSync(fs.readFileSync(gzPath));
