@@ -1,6 +1,6 @@
 /**
  * ETL: TJJD Youth Court Referrals (Local Excel)
- * Source: data/Redacted Youth Justice Data.xlsx
+ * Source: data/source/Redacted Youth Justice Data.xlsx
  * Output: data/generated/tjjd-data.json(.gz)
  */
 import * as XLSX from "xlsx";
@@ -8,7 +8,7 @@ import fs from "fs";
 import path from "path";
 import type { TJJDPayload, TJJDRecord } from "../src/lib/types/tjjd";
 
-const TJJD_PATH = path.join(process.cwd(), "data", "Redacted Youth Justice Data.xlsx");
+const TJJD_PATH = path.join(process.cwd(), "data", "source", "Redacted Youth Justice Data.xlsx");
 
 export async function runTJJDETL(): Promise<TJJDPayload> {
   if (!fs.existsSync(TJJD_PATH)) {

@@ -39,7 +39,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# data source files (too large for git)
-data/*.csv
-data/*.xlsx
-data/*.parquet
+# data generated files (rebuilt by ETL)
+# data/generated/ is committed (ETL output)
+# data/source/ is committed via Git LFS (source files)
+# data/crosswalks/ is committed (small reference files)

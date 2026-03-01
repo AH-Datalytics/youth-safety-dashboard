@@ -11,12 +11,27 @@ env:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     permissions:
       contents: write
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Pull LFS files
+        run: git lfs pull
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Download & prepare incidents Parquet
+        run: python scripts/prepare-incidents-parquet.py
 
       - uses: actions/setup-node@v4
         with:
@@ -27,12 +42,6 @@ jobs:
 
       - name: Run ETL pipelines
         run: npm run refresh-data
-        env:
-          SHAREPOINT_TENANT_ID: ${{ secrets.SHAREPOINT_TENANT_ID }}
-          SHAREPOINT_CLIENT_ID: ${{ secrets.SHAREPOINT_CLIENT_ID }}
-          SHAREPOINT_CLIENT_SECRET: ${{ secrets.SHAREPOINT_CLIENT_SECRET }}
-          SHAREPOINT_SITE_ID: ${{ secrets.SHAREPOINT_SITE_ID }}
-          SHAREPOINT_DRIVE_ID: ${{ secrets.SHAREPOINT_DRIVE_ID }}
 
       - name: Commit and push data
         run: |

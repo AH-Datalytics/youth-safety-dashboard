@@ -11,7 +11,8 @@ Migrated from Power BI Desktop to Next.js web app deployed on Vercel with automa
 - **Maps**: Leaflet + React-Leaflet (GeoJSON boundaries needed)
 - **State**: Zustand (per-domain filter stores)
 - **Data Fetching**: SWR (client-side, 15min revalidation)
-- **ETL**: tsx scripts fetching from Socrata APIs + local Excel/CSV files
+- **ETL**: tsx scripts fetching from Socrata APIs + Git LFS source files (Excel/CSV)
+- **Python**: prepare-incidents-parquet.py (downloads CSV → Parquet via Dallas Open Data)
 - **Deploy**: Vercel + GitHub Actions daily data refresh
 
 ## Brand / Theme
@@ -22,12 +23,17 @@ Migrated from Power BI Desktop to Next.js web app deployed on Vercel with automa
 - **Semantic**: Red `#dc2626` = bad/increase, Blue `#2563eb` = good/decrease
 
 ## Data Architecture
-1. **ETL scripts** (`scripts/`) fetch from Socrata APIs or read local files
-2. **JSON.gz files** written to `data/generated/` (committed to git)
-3. **API routes** (`src/app/api/`) decompress and serve with cache headers
-4. **SWR hooks** (`src/hooks/`) fetch from API, apply Zustand filters
-5. **Measure functions** (`src/lib/measures/`) compute YTD, rolling, category groupings
-6. **React components** render charts/tables from filtered data
+1. **Source files** (`data/source/`) committed via Git LFS (Excel/CSV — CFS, Campus, TJJD)
+2. **Crosswalks** (`data/crosswalks/`) committed (NIBRS, Discipline, Call Type xlsx)
+3. **Python script** downloads incidents CSV from Dallas Open Data → Parquet
+4. **ETL scripts** (`scripts/`) fetch from Socrata APIs or read from `data/source/`
+5. **JSON.gz files** written to `data/generated/` (committed to git)
+6. **API routes** (`src/app/api/`) decompress and serve with cache headers
+7. **SWR hooks** (`src/hooks/`) fetch from API, apply Zustand filters
+8. **Measure functions** (`src/lib/measures/`) compute YTD, rolling, category groupings
+9. **React components** render charts/tables from filtered data
+
+Nothing runs locally — all source data is in Git LFS or fetched from public APIs.
 
 ## 6 Data Domains
 | Domain | Source | ETL Script | Endpoint |
@@ -35,9 +41,9 @@ Migrated from Power BI Desktop to Next.js web app deployed on Vercel with automa
 | Incidents | Socrata `qv6i-rri7` | `etl-incidents.ts` | `/api/incidents` |
 | Arrests | Socrata `sdr7-6v3j` | `etl-arrests.ts` | `/api/arrests` |
 | 311 | Socrata `gc4d-8a49` | `etl-311.ts` | `/api/311` |
-| CFS | Local Excel | `etl-cfs.ts` | `/api/cfs` |
-| Campus | Local CSVs | `etl-campus.ts` | `/api/campus` |
-| TJJD | Local Excel | `etl-tjjd.ts` | `/api/tjjd` |
+| CFS | Git LFS Excel (`data/source/`) | `etl-cfs.ts` | `/api/cfs` |
+| Campus | Git LFS CSVs (`data/source/`) | `etl-campus.ts` | `/api/campus` |
+| TJJD | Git LFS Excel (`data/source/`) | `etl-tjjd.ts` | `/api/tjjd` |
 
 ## 13 Pages
 1. Home — Section cards + data source info
@@ -70,6 +76,7 @@ npm run dev                    # Local dev server
 npm run build                  # Production build (run before pushing)
 npm run refresh-data           # Run all ETL pipelines
 npx tsx scripts/etl-incidents.ts  # Run single ETL
+python scripts/prepare-incidents-parquet.py  # Download incidents CSV → Parquet
 ```
 
 ## Key Conventions

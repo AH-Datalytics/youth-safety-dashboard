@@ -1,13 +1,13 @@
 /**
  * ETL: CAMPUS Disciplinary Data (Local CSVs)
- * Source: data/campus/ directory with 7 CSV files (SY18 through SY24)
+ * Source: data/source/ directory with 7 CAMPUS_summary CSV files (SY18 through SY24)
  * Output: data/generated/campus-data.json(.gz)
  */
 import fs from "fs";
 import path from "path";
 import type { CampusPayload, CampusRecord } from "../src/lib/types/campus";
 
-const CAMPUS_DIR = path.join(process.cwd(), "data");
+const CAMPUS_DIR = path.join(process.cwd(), "data", "source");
 const SKIP_ROWS = 6; // TEA CSV files have 6 header rows before data
 
 function parseCSVLine(line: string): string[] {

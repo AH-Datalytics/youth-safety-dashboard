@@ -1,6 +1,6 @@
 /**
  * ETL: Calls for Service (Local Excel file)
- * Source: data/Calls for Service.xlsx (9 yearly sheets)
+ * Source: data/source/Calls for Service.xlsx (9 yearly sheets)
  * Output: data/generated/cfs-data.json(.gz)
  *
  * CRITICAL: 4.8M rows — must pre-aggregate heavily.
@@ -11,7 +11,7 @@ import fs from "fs";
 import path from "path";
 import type { CFSPayload, CFSRecord, CFSHourly } from "../src/lib/types/cfs";
 
-const CFS_PATH = path.join(process.cwd(), "data", "Calls for Service.xlsx");
+const CFS_PATH = path.join(process.cwd(), "data", "source", "Calls for Service.xlsx");
 const CFS_CUTOFF = "2020-01-01"; // Only last ~5 years
 
 function parseDate(raw: unknown): string | null {
