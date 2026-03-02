@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
@@ -11,8 +12,11 @@ export function Header() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // Check exact page match first (avoids /cfs-311/requests matching "cfs-311" section instead of "311")
   const activeSection = SECTIONS.find(
-    (s) => pathname.startsWith(`/${s.id}`) || s.pages.some((p) => pathname === p.href),
+    (s) => s.pages.some((p) => pathname === p.href),
+  ) ?? SECTIONS.find(
+    (s) => pathname.startsWith(`/${s.id}`),
   );
 
   return (
@@ -20,7 +24,15 @@ export function Header() {
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 h-14">
         <Link href="/" className="flex items-center gap-3 shrink-0">
-          <span className="font-serif font-bold text-base md:text-lg">
+          <Image
+            src="/lsja-logo.png"
+            alt="Lone Star Justice Alliance"
+            width={120}
+            height={45}
+            className="h-8 w-auto brightness-0 invert"
+            priority
+          />
+          <span className="hidden sm:inline font-serif font-bold text-base md:text-lg">
             Dallas Youth Safety Dashboard
           </span>
         </Link>
@@ -50,6 +62,15 @@ export function Header() {
               {section.label}
             </Link>
           ))}
+          <Link
+            href="/about"
+            className={cn(
+              "px-3 py-1.5 text-sm rounded transition-colors",
+              pathname === "/about" ? "bg-white/15 text-white" : "text-white/70 hover:text-white hover:bg-white/5",
+            )}
+          >
+            About
+          </Link>
         </nav>
 
         {/* Mobile toggle */}
@@ -119,6 +140,16 @@ export function Header() {
               ))}
             </div>
           ))}
+          <Link
+            href="/about"
+            onClick={() => setMobileOpen(false)}
+            className={cn(
+              "block px-4 py-2.5 text-sm mt-2 border-t border-white/10",
+              pathname === "/about" ? "text-white bg-white/10" : "text-white/70",
+            )}
+          >
+            About
+          </Link>
         </nav>
       )}
     </header>
