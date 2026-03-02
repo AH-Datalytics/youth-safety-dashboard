@@ -4,44 +4,36 @@ import { create } from "zustand";
 
 interface CampusFilterState {
   schoolYear: string | null;
-  campuses: string[];
-  categories: string[];
-  incidentTypes: string[];
-  actions: string[];
-  races: string[];
-  sexes: string[];
-  grades: string[];
+  campuses: number[];
+  types: string[];
+  sections: string[];
+  schoolType: string | null;
+  schoolNames: string[];
   setSchoolYear: (v: string | null) => void;
-  setCampuses: (v: string[]) => void;
-  setCategories: (v: string[]) => void;
-  setIncidentTypes: (v: string[]) => void;
-  setActions: (v: string[]) => void;
-  setRaces: (v: string[]) => void;
-  setSexes: (v: string[]) => void;
-  setGrades: (v: string[]) => void;
+  setCampuses: (v: number[]) => void;
+  setTypes: (v: string[]) => void;
+  setSections: (v: string[]) => void;
+  setSchoolType: (v: string | null) => void;
+  setSchoolNames: (v: string[]) => void;
   resetFilters: () => void;
 }
 
 const defaults = {
-  schoolYear: null,
-  campuses: [] as string[],
-  categories: [] as string[],
-  incidentTypes: [] as string[],
-  actions: [] as string[],
-  races: [] as string[],
-  sexes: [] as string[],
-  grades: [] as string[],
+  schoolYear: null as string | null,
+  campuses: [] as number[],
+  types: [] as string[],
+  sections: [] as string[],
+  schoolType: null as string | null,
+  schoolNames: [] as string[],
 };
 
 export const useCampusStore = create<CampusFilterState>((set) => ({
   ...defaults,
   setSchoolYear: (v) => set({ schoolYear: v }),
   setCampuses: (v) => set({ campuses: v }),
-  setCategories: (v) => set({ categories: v }),
-  setIncidentTypes: (v) => set({ incidentTypes: v }),
-  setActions: (v) => set({ actions: v }),
-  setRaces: (v) => set({ races: v }),
-  setSexes: (v) => set({ sexes: v }),
-  setGrades: (v) => set({ grades: v }),
+  setTypes: (v) => set({ types: v }),
+  setSections: (v) => set({ sections: v }),
+  setSchoolType: (v) => set({ schoolType: v }),
+  setSchoolNames: (v) => set({ schoolNames: v }),
   resetFilters: () => set(defaults),
 }));
