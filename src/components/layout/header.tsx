@@ -6,49 +6,55 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SECTIONS } from "@/lib/constants";
+import { useJurisdiction } from "@/lib/jurisdiction-context";
+import { getSections } from "@/lib/jurisdictions";
 
 export function Header() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const config = useJurisdiction();
+  const sections = getSections(config);
+
+  const homeHref = `/${config.id}`;
+  const aboutHref = `/${config.id}/about`;
 
   // Check exact page match first (avoids /cfs-311/requests matching "cfs-311" section instead of "311")
-  const activeSection = SECTIONS.find(
+  const activeSection = sections.find(
     (s) => s.pages.some((p) => pathname === p.href),
-  ) ?? SECTIONS.find(
-    (s) => pathname.startsWith(`/${s.id}`),
+  ) ?? sections.find(
+    (s) => pathname.startsWith(`/${config.id}/${s.id}`),
   );
 
   return (
     <header className="bg-black text-white relative z-[1100]">
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 h-14">
-        <Link href="/" className="flex items-center gap-3 shrink-0">
+        <Link href={homeHref} className="flex items-center gap-3 shrink-0">
           <Image
-            src="/lsja-logo.png"
-            alt="Lone Star Justice Alliance"
+            src={config.logo}
+            alt={config.org}
             width={120}
             height={45}
             className="h-8 w-auto invert"
             priority
           />
           <span className="hidden sm:inline font-serif font-bold text-base md:text-lg">
-            Dallas Youth Safety Dashboard
+            {config.shortName} Youth Safety Dashboard
           </span>
         </Link>
 
         {/* Desktop section nav */}
         <nav className="hidden md:flex items-center gap-1">
           <Link
-            href="/"
+            href={homeHref}
             className={cn(
               "px-3 py-1.5 text-sm rounded transition-colors",
-              pathname === "/" ? "bg-white/15 text-white" : "text-white/70 hover:text-white hover:bg-white/5",
+              pathname === homeHref ? "bg-white/15 text-white" : "text-white/70 hover:text-white hover:bg-white/5",
             )}
           >
             Home
           </Link>
-          {SECTIONS.map((section) => (
+          {sections.map((section) => (
             <Link
               key={section.id}
               href={section.href}
@@ -63,10 +69,10 @@ export function Header() {
             </Link>
           ))}
           <Link
-            href="/about"
+            href={aboutHref}
             className={cn(
               "px-3 py-1.5 text-sm rounded transition-colors",
-              pathname === "/about" ? "bg-white/15 text-white" : "text-white/70 hover:text-white hover:bg-white/5",
+              pathname === aboutHref ? "bg-white/15 text-white" : "text-white/70 hover:text-white hover:bg-white/5",
             )}
           >
             About
@@ -109,16 +115,16 @@ export function Header() {
       {mobileOpen && (
         <nav className="md:hidden border-t border-white/10 pb-3 bg-black">
           <Link
-            href="/"
+            href={homeHref}
             onClick={() => setMobileOpen(false)}
             className={cn(
               "block px-4 py-2.5 text-sm",
-              pathname === "/" ? "text-white bg-white/10" : "text-white/70",
+              pathname === homeHref ? "text-white bg-white/10" : "text-white/70",
             )}
           >
             Home
           </Link>
-          {SECTIONS.map((section) => (
+          {sections.map((section) => (
             <div key={section.id}>
               <div className="px-4 pt-3 pb-1 text-xs font-bold text-white/40 uppercase tracking-wider">
                 {section.label}
@@ -141,11 +147,11 @@ export function Header() {
             </div>
           ))}
           <Link
-            href="/about"
+            href={aboutHref}
             onClick={() => setMobileOpen(false)}
             className={cn(
               "block px-4 py-2.5 text-sm mt-2 border-t border-white/10",
-              pathname === "/about" ? "text-white bg-white/10" : "text-white/70",
+              pathname === aboutHref ? "text-white bg-white/10" : "text-white/70",
             )}
           >
             About

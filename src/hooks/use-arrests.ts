@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import type { ArrestPayload, ArrestRecord } from "@/lib/types";
 import { useArrestStore } from "@/stores/arrest-store";
+import { useApiUrl } from "@/hooks/use-api-url";
 import { SWR_CONFIG } from "@/lib/constants";
 
 const fetcher = async (url: string) => {
@@ -12,8 +13,9 @@ const fetcher = async (url: string) => {
 };
 
 export function useArrests() {
+  const url = useApiUrl("arrests");
   const { data, error, isLoading } = useSWR<ArrestPayload>(
-    "/api/arrests",
+    url,
     fetcher,
     SWR_CONFIG,
   );
@@ -49,6 +51,7 @@ export function useFilteredArrests() {
           races: data.races,
           sexes: data.sexes,
           ageGroups: data.ageGroups,
+          youngAdultGroups: data.youngAdultGroups,
           districts: data.districts,
           summary: data.summary,
         }

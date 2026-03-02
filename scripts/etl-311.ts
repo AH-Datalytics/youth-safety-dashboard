@@ -2,45 +2,89 @@
  * ETL: Dallas 311 Service Requests (Socrata)
  * Source: https://www.dallasopendata.com/resource/gc4d-8a49
  * Output: data/generated/311-data.json(.gz)
+ *
+ * Per PBI: filtered to department = "Code Compliance" only.
+ * Fetches lat_location for dot map, priority for priority groups.
+ * Uses unique_key for DISTINCTCOUNT matching PBI.
  */
-import type { Request311Payload, Request311Record } from "../src/lib/types/requests311";
+import type { Request311Payload, Request311Record, Request311Point } from "../src/lib/types/requests311";
+import { priorityGroup311 } from "./utils/normalize";
 
-const ENDPOINT = "https://www.dallasopendata.com/resource/gc4d-8a49.json";
+const DEFAULT_ENDPOINT = "https://www.dallasopendata.com/resource/gc4d-8a49.json";
 const PAGE_SIZE = 50_000;
 const MAX_RECORDS = 2_000_000;
 const DATA_FLOOR = "2020-01-01T00:00:00";
 
+export interface ETL311Config {
+  baseUrl?: string;
+  datasetId?: string;
+}
+
 interface Socrata311 {
+  unique_key?: string;
   created_date?: string;
   service_request_type?: string;
   department?: string;
   status?: string;
+  priority?: string;
   city_council_district?: string;
   address?: string;
+  lat_location?: string | { latitude?: string; longitude?: string };
   [key: string]: unknown;
-}
-
-function cleanDepartment(raw: string | undefined): string {
-  if (!raw) return "Unknown";
-  // Clean up common department name issues
-  return raw.trim().replace(/\s+/g, " ");
 }
 
 function cleanRequestType(raw: string | undefined): string {
   if (!raw) return "Unknown";
-  // Split on " - " and take first part for high-level category
   const parts = raw.split(" - ");
   return parts[0].trim();
 }
 
-export async function run311ETL(): Promise<Request311Payload> {
-  console.log("[311-etl] Fetching from Socrata...");
+/** Parse lat/lon from Socrata lat_location field (handles multiple formats) */
+function parseLatLon(raw: unknown): { lat: number; lon: number } | null {
+  if (!raw) return null;
+  // Object format: { latitude: "...", longitude: "..." }
+  if (typeof raw === "object" && raw !== null) {
+    const obj = raw as Record<string, unknown>;
+    const lat = parseFloat(String(obj.latitude ?? ""));
+    const lon = parseFloat(String(obj.longitude ?? ""));
+    if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0) return { lat, lon };
+    // GeoJSON coordinates format
+    if (obj.coordinates && Array.isArray(obj.coordinates)) {
+      const [lo, la] = obj.coordinates as number[];
+      if (!isNaN(la) && !isNaN(lo) && la !== 0 && lo !== 0) return { lat: la, lon: lo };
+    }
+    return null;
+  }
+  // String format: "(lat, lon)" or "POINT(lon lat)"
+  if (typeof raw === "string") {
+    const parenMatch = raw.match(/\(([^,]+),\s*([^)]+)\)/);
+    if (parenMatch) {
+      const lat = parseFloat(parenMatch[1]);
+      const lon = parseFloat(parenMatch[2]);
+      if (!isNaN(lat) && !isNaN(lon)) return { lat, lon };
+    }
+    const pointMatch = raw.match(/POINT\s*\(([^ ]+)\s+([^)]+)\)/i);
+    if (pointMatch) {
+      const lon = parseFloat(pointMatch[1]);
+      const lat = parseFloat(pointMatch[2]);
+      if (!isNaN(lat) && !isNaN(lon)) return { lat, lon };
+    }
+  }
+  return null;
+}
+
+export async function run311ETL(config?: ETL311Config): Promise<Request311Payload> {
+  const endpoint = config?.baseUrl && config?.datasetId
+    ? `${config.baseUrl}/${config.datasetId}.json`
+    : DEFAULT_ENDPOINT;
+  console.log("[311-etl] Fetching from Socrata (Code Compliance only)...");
 
   const allRecords: Socrata311[] = [];
   let offset = 0;
 
+  // Filter to Code Compliance in the Socrata query
   while (offset < MAX_RECORDS) {
-    const url = `${ENDPOINT}?$where=created_date>='${DATA_FLOOR}'&$limit=${PAGE_SIZE}&$offset=${offset}&$order=created_date DESC`;
+    const url = `${endpoint}?$where=created_date>='${DATA_FLOOR}' AND department='Code Compliance'&$limit=${PAGE_SIZE}&$offset=${offset}&$order=created_date DESC`;
     console.log(`[311-etl] Fetching offset=${offset}...`);
 
     const res = await fetch(url);
@@ -54,44 +98,69 @@ export async function run311ETL(): Promise<Request311Payload> {
     if (batch.length < PAGE_SIZE) break;
   }
 
-  console.log(`[311-etl] Fetched ${allRecords.length.toLocaleString()} records`);
+  console.log(`[311-etl] Fetched ${allRecords.length.toLocaleString()} Code Compliance records`);
 
   // Aggregate
   const aggMap = new Map<string, number>();
-  const records: Request311Record[] = [];
+  const pointMap = new Map<string, { lat: number; lon: number; rt: string; pg: string; c: number }>();
   const requestTypeSet = new Set<string>();
   const departmentSet = new Set<string>();
   const statusSet = new Set<string>();
+  const priorityGroupSet = new Set<string>();
   const districtSet = new Set<string>();
   const zipSet = new Set<string>();
+  const seenKeys = new Set<string>();
   let maxDate = "";
 
   for (const raw of allRecords) {
     if (!raw.created_date) continue;
+
+    // DISTINCTCOUNT by unique_key (per PBI measure)
+    const uniqueKey = raw.unique_key?.trim() ?? "";
+    if (uniqueKey && seenKeys.has(uniqueKey)) continue;
+    if (uniqueKey) seenKeys.add(uniqueKey);
+
     const date = raw.created_date.substring(0, 10);
     const requestType = cleanRequestType(raw.service_request_type);
-    const department = cleanDepartment(raw.department);
+    const department = raw.department?.trim() || "Code Compliance";
     const status = raw.status?.trim() || "Unknown";
+    const pg = priorityGroup311(raw.priority);
     const district = raw.city_council_district?.trim() || "";
-    // Extract zip from address (e.g. "123 MAIN ST, DALLAS, TX, 75201")
     const zipMatch = raw.address?.match(/\b(\d{5})\s*$/);
     const zip = zipMatch ? zipMatch[1] : "";
 
     requestTypeSet.add(requestType);
     departmentSet.add(department);
     statusSet.add(status);
+    priorityGroupSet.add(pg);
     if (district) districtSet.add(district);
     if (zip) zipSet.add(zip);
     if (date > maxDate) maxDate = date;
 
-    const key = `${date}|${requestType}|${department}|${status}|${district}|${zip}`;
+    const key = `${date}|${requestType}|${department}|${status}|${pg}|${district}|${zip}`;
     aggMap.set(key, (aggMap.get(key) ?? 0) + 1);
+
+    // Collect points for dot map (aggregate by location)
+    const ll = parseLatLon(raw.lat_location);
+    if (ll) {
+      // Round to ~100m precision for aggregation
+      const ptKey = `${ll.lat.toFixed(4)},${ll.lon.toFixed(4)}|${requestType}|${pg}`;
+      const existing = pointMap.get(ptKey);
+      if (existing) {
+        existing.c++;
+      } else {
+        pointMap.set(ptKey, { lat: ll.lat, lon: ll.lon, rt: requestType, pg, c: 1 });
+      }
+    }
   }
 
+  const records: Request311Record[] = [];
   for (const [key, count] of aggMap) {
-    const [d, rt, dp, st, di, zi] = key.split("|");
-    records.push({ d, rt, dp, st, di, zi, c: count });
+    const [d, rt, dp, st, pg, di, zi] = key.split("|");
+    records.push({ d, rt, dp, st, pg, di, zi, c: count });
   }
+
+  const points: Request311Point[] = Array.from(pointMap.values());
 
   // YTD
   const now = new Date();
@@ -107,14 +176,18 @@ export async function run311ETL(): Promise<Request311Payload> {
   const total = records.reduce((s, r) => s + r.c, 0);
 
   console.log(`[311-etl] Aggregated to ${records.length.toLocaleString()} rows, total=${total.toLocaleString()}`);
+  console.log(`[311-etl] Points for dot map: ${points.length.toLocaleString()}`);
+  console.log(`[311-etl] Priority groups: ${Array.from(priorityGroupSet).join(", ")}`);
 
   return {
     lastUpdated: new Date().toISOString(),
     dataThrough: maxDate,
     records,
+    points,
     requestTypes: Array.from(requestTypeSet).sort(),
     departments: Array.from(departmentSet).sort(),
     statuses: Array.from(statusSet).sort(),
+    priorityGroups: Array.from(priorityGroupSet).sort(),
     districts: Array.from(districtSet).sort(),
     zipCodes: Array.from(zipSet).sort(),
     summary: {

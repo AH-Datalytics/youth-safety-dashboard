@@ -1,4 +1,4 @@
-/** LSJA brand colors */
+/** Default brand colors (used as fallback / landing page) */
 export const COLORS = {
   primary: "#2C1A6B",
   primaryDark: "#1A0F40",
@@ -34,67 +34,6 @@ export const MAP_DOT_COLORS = {
   Property: "#2C1A6B",
   Society: "#0d9488",
 } as const;
-
-/** Socrata API endpoints */
-export const SOCRATA = {
-  baseUrl: "https://www.dallasopendata.com/resource",
-  incidents: "qv6i-rri7",
-  arrests: "sdr7-6v3j",
-  requests311: "gc4d-8a49",
-} as const;
-
-/** Dashboard sections for navigation */
-export const SECTIONS = [
-  {
-    id: "offense-arrest",
-    label: "Offense & Arrest",
-    href: "/offense-arrest/overview",
-    pages: [
-      { id: "overview", label: "Overview", href: "/offense-arrest/overview" },
-      { id: "arrests", label: "Demographics", href: "/offense-arrest/arrests" },
-    ],
-  },
-  {
-    id: "cfs-311",
-    label: "CFS",
-    href: "/cfs-311/overview",
-    pages: [
-      { id: "overview", label: "Overview", href: "/cfs-311/overview" },
-    ],
-  },
-  {
-    id: "311",
-    label: "311",
-    href: "/cfs-311/requests",
-    pages: [
-      { id: "requests", label: "Requests", href: "/cfs-311/requests" },
-    ],
-  },
-  {
-    id: "map",
-    label: "Map",
-    href: "/map",
-    pages: [
-      { id: "map", label: "Map", href: "/map" },
-    ],
-  },
-  {
-    id: "youth-court",
-    label: "Youth Court",
-    href: "/youth-court/referrals",
-    pages: [
-      { id: "referrals", label: "Referrals", href: "/youth-court/referrals" },
-    ],
-  },
-  {
-    id: "school-discipline",
-    label: "School Discipline",
-    href: "/school-discipline/incidents",
-    pages: [
-      { id: "incidents", label: "Overview", href: "/school-discipline/incidents" },
-    ],
-  },
-] as const;
 
 /** Data floor — earliest date in Socrata datasets */
 export const DATA_FLOOR = "2017-01-01";

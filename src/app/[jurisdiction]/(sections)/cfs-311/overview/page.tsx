@@ -1,0 +1,139 @@
+"use client";
+
+import { useMemo, useEffect } from "react";
+import { useFilteredCFS } from "@/hooks/use-cfs";
+import { useCFSStore } from "@/stores/cfs-store";
+import { computeMonthly, computeYTD, groupByKey } from "@/lib/measures";
+import { MonthlyBarChart } from "@/components/charts/monthly-bar-chart";
+import { BarChartHorizontal } from "@/components/charts/bar-chart-horizontal";
+import { TimeMatrix } from "@/components/charts/time-matrix";
+import { DateRangeSlicer } from "@/components/filters/date-range-slicer";
+import { MultiSelect } from "@/components/filters/multi-select";
+import { TreeFilter, type TreeNode } from "@/components/filters/tree-filter";
+import { KPICard } from "@/components/ui/kpi-card";
+import { KPIBannerSkeleton, ChartSkeleton } from "@/components/ui/loading-skeleton";
+
+/** Default date: Jan 1 of 2 years ago */
+function defaultDateFrom(): string {
+  const year = new Date().getFullYear() - 2;
+  return `${year}-01-01`;
+}
+
+export default function CFSOverviewPage() {
+  const { filteredData, hourly, categoryTree, metadata, isLoading } = useFilteredCFS();
+  const store = useCFSStore();
+
+  // Prepopulate date range
+  useEffect(() => {
+    if (metadata && !store.dateFrom && !store.dateTo) {
+      store.setDateFrom(defaultDateFrom());
+      if (metadata.dataThrough) store.setDateTo(metadata.dataThrough);
+    }
+  }, [metadata, store.dateFrom, store.dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const monthly = useMemo(() => computeMonthly(filteredData), [filteredData]);
+  const byCategory = useMemo(() => groupByKey(filteredData, (r) => r.cat || r.ct), [filteredData]);
+  const total = useMemo(() => filteredData.reduce((s, r) => s + r.c, 0), [filteredData]);
+  const ytd = useMemo(() => computeYTD(filteredData), [filteredData]);
+
+  // Build call type tree from categoryTree
+  const treeNodes: TreeNode[] = useMemo(() => {
+    if (!categoryTree || categoryTree.length === 0) return [];
+    return categoryTree.map((node) => ({
+      label: node.category,
+      children: node.subCategories.map((sc) => ({ label: sc })),
+    }));
+  }, [categoryTree]);
+
+  if (isLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-6">
+        <h1 className="font-serif text-lg md:text-xl font-bold">Calls for Service Overview</h1>
+        <KPIBannerSkeleton />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ChartSkeleton />
+          <ChartSkeleton />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-4">
+      <h1 className="font-serif text-lg md:text-xl font-bold">Calls for Service Overview</h1>
+
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-lg border border-border">
+        <DateRangeSlicer
+          dateFrom={store.dateFrom}
+          dateTo={store.dateTo}
+          onDateFromChange={store.setDateFrom}
+          onDateToChange={store.setDateTo}
+          min={metadata?.dataThrough ? "2020-01-01" : undefined}
+          max={metadata?.dataThrough}
+        />
+        {treeNodes.length > 0 && (
+          <TreeFilter
+            label="Call Type"
+            nodes={treeNodes}
+            selected={store.categories}
+            onChange={store.setCategories}
+          />
+        )}
+        <MultiSelect
+          label="Priority"
+          options={metadata?.priorities ?? []}
+          selected={store.priorities}
+          onChange={store.setPriorities}
+        />
+        <MultiSelect
+          label="District"
+          options={metadata?.districts ?? []}
+          selected={store.districts}
+          onChange={store.setDistricts}
+        />
+        <MultiSelect
+          label="Disposition"
+          options={metadata?.dispositionGroups ?? []}
+          selected={store.dispositionGroups}
+          onChange={store.setDispositionGroups}
+        />
+      </div>
+
+      {/* KPI Banner */}
+      <div className="bg-primary rounded-lg grid grid-cols-2 md:grid-cols-4 divide-x divide-white/10">
+        <KPICard label="Total Calls" value={total} />
+        <KPICard
+          label="Avg Response Time (Min)"
+          value={metadata?.summary?.avgResponseTime ?? 0}
+          decimals={1}
+        />
+        <KPICard
+          label="Avg Time Spent (Min)"
+          value={metadata?.summary?.avgTimeSpent ?? 0}
+          decimals={1}
+        />
+        <KPICard
+          label="YTD Current"
+          value={ytd.currentYTD}
+          priorValue={ytd.priorYTD}
+          pctChange={ytd.pctChange}
+        />
+      </div>
+      {metadata?.dataThrough && (
+        <p className="text-xs text-muted-foreground -mt-2">
+          Data through {metadata.dataThrough}
+        </p>
+      )}
+
+      {/* Monthly bar chart */}
+      <MonthlyBarChart data={monthly} title="# of CFS by Year and Month" />
+
+      {/* Call type breakdown */}
+      <BarChartHorizontal data={byCategory} title="# of CFS by Call Type" />
+
+      {/* Heat map */}
+      <TimeMatrix data={hourly} title="Hour x Day of Week Heat Map" />
+    </div>
+  );
+}

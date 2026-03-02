@@ -8,6 +8,7 @@ interface Requests311FilterState {
   requestTypes: string[];
   departments: string[];
   statuses: string[];
+  priorityGroups: string[];
   districts: string[];
   zipCodes: string[];
   setDateFrom: (v: string | null) => void;
@@ -15,6 +16,7 @@ interface Requests311FilterState {
   setRequestTypes: (v: string[]) => void;
   setDepartments: (v: string[]) => void;
   setStatuses: (v: string[]) => void;
+  setPriorityGroups: (v: string[]) => void;
   setDistricts: (v: string[]) => void;
   setZipCodes: (v: string[]) => void;
   resetFilters: () => void;
@@ -26,6 +28,7 @@ const defaults = {
   requestTypes: [] as string[],
   departments: [] as string[],
   statuses: [] as string[],
+  priorityGroups: [] as string[],
   districts: [] as string[],
   zipCodes: [] as string[],
 };
@@ -37,6 +40,7 @@ export const useRequests311Store = create<Requests311FilterState>((set) => ({
   setRequestTypes: (v) => set({ requestTypes: v }),
   setDepartments: (v) => set({ departments: v }),
   setStatuses: (v) => set({ statuses: v }),
+  setPriorityGroups: (v) => set({ priorityGroups: v }),
   setDistricts: (v) => set({ districts: v }),
   setZipCodes: (v) => set({ zipCodes: v }),
   resetFilters: () => set(defaults),

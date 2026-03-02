@@ -1,14 +1,31 @@
 /**
- * ETL: TJJD Youth Court Referrals (Local Excel)
+ * ETL: TJJD Youth Court Referrals (Local Excel — wide-to-long unpivot)
  * Source: data/source/Redacted Youth Justice Data.xlsx
  * Output: data/generated/tjjd-data.json(.gz)
+ *
+ * TJJD Data sheet: Wide format with monthly columns (January-2020 through December-2023)
+ *   Rows: Category + Description combinations
+ *   After unpivot: ~3,400 rows with: Category, Description, Year, Month #, Month, Total
+ *
+ * Zip Code sheet: Wide format with year columns (2020-2023)
+ *   Rows: ZIP codes
+ *   After unpivot: ~738 rows, filtered to Dallas-area zips (75000-75300),
+ *   excluding: 75005, 75022, 75129, 75200, 75280
  */
 import * as XLSX from "xlsx";
 import fs from "fs";
 import path from "path";
-import type { TJJDPayload, TJJDRecord } from "../src/lib/types/tjjd";
+import type { TJJDPayload, TJJDRecord, TJJDZipRecord } from "../src/lib/types/tjjd";
 
 const TJJD_PATH = path.join(process.cwd(), "data", "source", "Redacted Youth Justice Data.xlsx");
+
+const EXCLUDED_ZIPS = new Set([75005, 75022, 75129, 75200, 75280]);
+
+/** Month name → number mapping */
+const MONTH_MAP: Record<string, number> = {
+  January: 1, February: 2, March: 3, April: 4, May: 5, June: 6,
+  July: 7, August: 8, September: 9, October: 10, November: 11, December: 12,
+};
 
 export async function runTJJDETL(): Promise<TJJDPayload> {
   if (!fs.existsSync(TJJD_PATH)) {
@@ -20,93 +37,164 @@ export async function runTJJDETL(): Promise<TJJDPayload> {
   const workbook = XLSX.readFile(TJJD_PATH);
   console.log(`[tjjd-etl] Found sheets: ${workbook.SheetNames.join(", ")}`);
 
-  const records: TJJDRecord[] = [];
-  const aggMap = new Map<string, number>();
-  const schoolYearSet = new Set<string>();
-  const countySet = new Set<string>();
-  const offenseSet = new Set<string>();
-  const raceSet = new Set<string>();
-  const sexSet = new Set<string>();
-  const ageGroupSet = new Set<string>();
+  const records = processMainSheet(workbook);
+  const zipRecords = processZipSheet(workbook);
 
-  for (const sheetName of workbook.SheetNames) {
-    const sheet = workbook.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+  const categories = [...new Set(records.map(r => r.cat))].sort();
+  const descriptions = [...new Set(records.map(r => r.desc))].sort();
+  const years = [...new Set(records.map(r => r.yr))].sort();
 
-    // Determine school year from sheet name
-    const syMatch = sheetName.match(/(\d{2})-?(\d{2})/);
-    const schoolYear = syMatch ? `20${syMatch[1]}-${syMatch[2]}` : sheetName;
-    schoolYearSet.add(schoolYear);
+  const totalReferrals = records.reduce((s, r) => s + r.v, 0);
+  const totalZipReferrals = zipRecords.reduce((s, r) => s + r.v, 0);
 
-    for (const rawRow of rows) {
-      const row = rawRow as Record<string, unknown>;
-
-      const county = String(row["County"] ?? row["county"] ?? "Dallas").trim();
-      const offense = String(row["Offense"] ?? row["offense"] ?? row["Offense Type"] ?? "Unknown").trim();
-      const race = String(row["Race"] ?? row["race"] ?? row["Race/Ethnicity"] ?? "Unknown").trim();
-      const sex = String(row["Sex"] ?? row["sex"] ?? row["Gender"] ?? "Unknown").trim();
-      const ageGroup = String(row["Age Group"] ?? row["age_group"] ?? row["Age"] ?? "Unknown").trim();
-      const countStr = String(row["Count"] ?? row["count"] ?? row["Referrals"] ?? "1");
-      const count = parseInt(countStr) || 1;
-
-      countySet.add(county);
-      offenseSet.add(offense);
-      raceSet.add(race);
-      sexSet.add(sex);
-      ageGroupSet.add(ageGroup);
-
-      const key = `${schoolYear}|${county}|${offense}|${race}|${sex}|${ageGroup}`;
-      aggMap.set(key, (aggMap.get(key) ?? 0) + count);
-    }
-  }
-
-  let totalReferrals = 0;
-  for (const [key, count] of aggMap) {
-    const [sy, co, of_, ra, sx, ag] = key.split("|");
-    records.push({ sy, co, of: of_, ra, sx, ag, c: count });
-    totalReferrals += count;
-  }
-
-  // Simple YTD (by school year)
-  const sortedYears = Array.from(schoolYearSet).sort();
-  const currentSY = sortedYears[sortedYears.length - 1] ?? "";
-  const priorSY = sortedYears[sortedYears.length - 2] ?? "";
-  let ytdCurrent = 0, ytdPrior = 0;
-  for (const r of records) {
-    if (r.sy === currentSY) ytdCurrent += r.c;
-    if (r.sy === priorSY) ytdPrior += r.c;
-  }
-
-  console.log(`[tjjd-etl] Aggregated to ${records.length.toLocaleString()} rows, total=${totalReferrals.toLocaleString()}`);
+  console.log(`[tjjd-etl] Main data: ${records.length.toLocaleString()} rows, total=${totalReferrals.toLocaleString()}`);
+  console.log(`[tjjd-etl] Zip data: ${zipRecords.length.toLocaleString()} rows, total=${totalZipReferrals.toLocaleString()}`);
+  console.log(`[tjjd-etl] Categories: ${categories.join(", ")}`);
+  console.log(`[tjjd-etl] Years: ${years.join(", ")}`);
 
   return {
     lastUpdated: new Date().toISOString(),
     records,
-    schoolYears: sortedYears,
-    counties: Array.from(countySet).sort(),
-    offenses: Array.from(offenseSet).sort(),
-    races: Array.from(raceSet).sort(),
-    sexes: Array.from(sexSet).sort(),
-    ageGroups: Array.from(ageGroupSet).sort(),
-    summary: {
-      totalReferrals,
-      ytdCurrent,
-      ytdPrior,
-      pctChange: ytdPrior === 0 ? 0 : (ytdCurrent - ytdPrior) / ytdPrior,
-    },
+    zipRecords,
+    categories,
+    descriptions,
+    years,
+    summary: { totalReferrals, totalZipReferrals },
   };
+}
+
+/**
+ * Process the main TJJD Data sheet — wide-to-long unpivot.
+ * Expected format: first 2 columns are Category/Description, rest are monthly columns
+ * like "January-2020", "February-2020", ..., "December-2023"
+ */
+function processMainSheet(workbook: XLSX.WorkBook): TJJDRecord[] {
+  // Try "TJJD Data" sheet name, fall back to first sheet
+  const sheetName = workbook.SheetNames.find(s =>
+    s.toLowerCase().includes("tjjd") || s.toLowerCase().includes("data")
+  ) ?? workbook.SheetNames[0];
+
+  const sheet = workbook.Sheets[sheetName];
+  if (!sheet) return [];
+
+  const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" }) as Record<string, unknown>[];
+  if (rows.length === 0) return [];
+
+  console.log(`[tjjd-etl] Processing sheet "${sheetName}" (${rows.length} rows)...`);
+
+  // Identify category/description columns and monthly columns
+  const headers = Object.keys(rows[0]);
+  const catCol = headers.find(h =>
+    h.toLowerCase() === "category" || h.toLowerCase() === "cat"
+  ) ?? headers[0];
+  const descCol = headers.find(h =>
+    h.toLowerCase() === "description" || h.toLowerCase() === "desc"
+  ) ?? headers[1];
+
+  // Monthly columns: "Month-Year" format like "January-2020"
+  const monthCols: { header: string; month: string; monthNum: number; year: string }[] = [];
+  for (const h of headers) {
+    const match = h.match(/^(\w+)-(\d{4})$/);
+    if (match) {
+      const monthName = match[1];
+      const year = match[2];
+      const monthNum = MONTH_MAP[monthName];
+      if (monthNum) {
+        monthCols.push({ header: h, month: monthName, monthNum, year });
+      }
+    }
+  }
+
+  console.log(`[tjjd-etl] Found ${monthCols.length} monthly columns`);
+
+  const records: TJJDRecord[] = [];
+
+  for (const row of rows) {
+    const cat = String(row[catCol] ?? "").trim();
+    const desc = String(row[descCol] ?? "").trim();
+    if (!cat || !desc) continue;
+
+    for (const mc of monthCols) {
+      const rawVal = row[mc.header];
+      const v = typeof rawVal === "number" ? rawVal : parseInt(String(rawVal));
+      if (isNaN(v) || v === 0) continue;
+
+      records.push({
+        cat,
+        desc,
+        yr: mc.year,
+        mo: mc.monthNum,
+        mn: mc.month,
+        v,
+      });
+    }
+  }
+
+  return records;
+}
+
+/**
+ * Process the Zip Code sheet — wide-to-long unpivot of year columns.
+ * Filter to Dallas-area zips (75000-75300), exclude 5 specific zips.
+ */
+function processZipSheet(workbook: XLSX.WorkBook): TJJDZipRecord[] {
+  const sheetName = workbook.SheetNames.find(s =>
+    s.toLowerCase().includes("zip")
+  );
+  if (!sheetName) {
+    console.log("[tjjd-etl] No Zip Code sheet found");
+    return [];
+  }
+
+  const sheet = workbook.Sheets[sheetName];
+  if (!sheet) return [];
+
+  const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" }) as Record<string, unknown>[];
+  if (rows.length === 0) return [];
+
+  console.log(`[tjjd-etl] Processing sheet "${sheetName}" (${rows.length} rows)...`);
+
+  const headers = Object.keys(rows[0]);
+  const zipCol = headers.find(h =>
+    h.toLowerCase().includes("zip")
+  ) ?? headers[0];
+
+  // Year columns: 4-digit numbers
+  const yearCols = headers.filter(h => /^\d{4}$/.test(h.trim()));
+  console.log(`[tjjd-etl] Found ${yearCols.length} year columns: ${yearCols.join(", ")}`);
+
+  const records: TJJDZipRecord[] = [];
+
+  for (const row of rows) {
+    const zipRaw = row[zipCol];
+    const zip = typeof zipRaw === "number" ? zipRaw : parseInt(String(zipRaw));
+    if (isNaN(zip)) continue;
+
+    // Filter to Dallas-area zips (75000-75300)
+    if (zip < 75000 || zip > 75300) continue;
+    // Exclude specific zips per PBI
+    if (EXCLUDED_ZIPS.has(zip)) continue;
+
+    for (const yr of yearCols) {
+      const rawVal = row[yr];
+      const v = typeof rawVal === "number" ? rawVal : parseInt(String(rawVal));
+      if (isNaN(v) || v === 0) continue;
+
+      records.push({ zip, yr: yr.trim(), v });
+    }
+  }
+
+  return records;
 }
 
 function emptyPayload(): TJJDPayload {
   return {
     lastUpdated: new Date().toISOString(),
     records: [],
-    schoolYears: [],
-    counties: [],
-    offenses: [],
-    races: [],
-    sexes: [],
-    ageGroups: [],
-    summary: { totalReferrals: 0, ytdCurrent: 0, ytdPrior: 0, pctChange: 0 },
+    zipRecords: [],
+    categories: [],
+    descriptions: [],
+    years: [],
+    summary: { totalReferrals: 0, totalZipReferrals: 0 },
   };
 }

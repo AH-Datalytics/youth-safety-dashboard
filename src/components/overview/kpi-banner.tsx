@@ -10,7 +10,8 @@ interface BannerKPI {
 interface KPIBannerProps {
   offenses: BannerKPI | null;
   arrests: BannerKPI | null;
-  cfs: BannerKPI | null;
+  clearedUnder17: BannerKPI | null;
+  clearedOver18: BannerKPI | null;
   requests311: BannerKPI | null;
   isLoading?: boolean;
 }
@@ -73,13 +74,14 @@ function KPIBlock({
 export function KPIBanner({
   offenses,
   arrests,
-  cfs,
+  clearedUnder17,
+  clearedOver18,
   requests311,
   isLoading,
 }: KPIBannerProps) {
   return (
     <div className="bg-[#2C1A6B] rounded-lg mb-6 overflow-hidden">
-      <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-white/10">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 divide-x divide-white/10">
         <KPIBlock
           label="Offenses YTD"
           value={offenses?.count?.toLocaleString() ?? "—"}
@@ -95,9 +97,16 @@ export function KPIBanner({
           isLoading={isLoading}
         />
         <KPIBlock
-          label="CFS Calls YTD"
-          value={cfs?.count?.toLocaleString() ?? "—"}
-          pctChange={cfs?.pctChange ?? null}
+          label="Arrests (17 & Under)"
+          value={clearedUnder17?.count?.toLocaleString() ?? "—"}
+          pctChange={clearedUnder17?.pctChange ?? null}
+          increaseIsBad={true}
+          isLoading={isLoading}
+        />
+        <KPIBlock
+          label="Arrests (18 & Older)"
+          value={clearedOver18?.count?.toLocaleString() ?? "—"}
+          pctChange={clearedOver18?.pctChange ?? null}
           increaseIsBad={true}
           isLoading={isLoading}
         />
