@@ -52,3 +52,6 @@ data/generated/*.json
 
 # Parquet files (generated at CI time)
 data/generated/*.parquet
+
+# Git worktrees
+.worktrees/
