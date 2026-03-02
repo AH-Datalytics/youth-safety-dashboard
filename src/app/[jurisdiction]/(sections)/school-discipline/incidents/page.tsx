@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { useFilteredCampus } from "@/hooks/use-campus";
+import { useCampus, useFilteredCampus } from "@/hooks/use-campus";
 import { useCampusStore } from "@/stores/campus-store";
+import { DownloadButton } from "@/components/ui/download-button";
+import { DOWNLOAD_DOMAINS } from "@/config/download-columns";
 import { BarChartHorizontal } from "@/components/charts/bar-chart-horizontal";
 import { CompStatDisciplineTable } from "@/components/charts/compstat-discipline-table";
 import { DotMap, type DotMapPoint } from "@/components/charts/dot-map";
@@ -22,7 +24,10 @@ function cleanInstructionType(raw: string): string {
   return raw.replace(/ INSTRUCTIONAL$/i, "").trim();
 }
 
+const campusCols = DOWNLOAD_DOMAINS.find((d) => d.domainId === "campus")!.columns;
+
 export default function SchoolDisciplinePage() {
+  const { data: rawPayload } = useCampus();
   const { filteredData, compStatRecords, filteredSchools, schoolNameOptions, metadata, isLoading } =
     useFilteredCampus();
   const store = useCampusStore();
@@ -110,6 +115,15 @@ export default function SchoolDisciplinePage() {
           selected={store.sections}
           onChange={store.setSections}
         />
+        <div className="ml-auto">
+          <DownloadButton
+            domain="campus"
+            columns={campusCols}
+            filteredData={filteredData}
+            fullData={rawPayload?.records ?? []}
+            isLoading={isLoading}
+          />
+        </div>
       </div>
 
       {/* CompStat Table */}

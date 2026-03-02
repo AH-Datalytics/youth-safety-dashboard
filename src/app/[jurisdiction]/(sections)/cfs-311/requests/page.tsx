@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useEffect, useCallback } from "react";
-import { useFiltered311 } from "@/hooks/use-311";
+import { use311, useFiltered311 } from "@/hooks/use-311";
 import { useRequests311Store } from "@/stores/requests311-store";
+import { DownloadButton } from "@/components/ui/download-button";
+import { DOWNLOAD_DOMAINS } from "@/config/download-columns";
 import { computeMonthly, computeYTD, groupByKey } from "@/lib/measures";
 import { MonthlyBarChart } from "@/components/charts/monthly-bar-chart";
 import { BarChartHorizontal } from "@/components/charts/bar-chart-horizontal";
@@ -17,7 +19,10 @@ function defaultDateFrom(): string {
   return `${year}-01-01`;
 }
 
+const cols311 = DOWNLOAD_DOMAINS.find((d) => d.domainId === "311")!.columns;
+
 export default function Requests311Page() {
+  const { data: rawPayload } = use311();
   const { filteredData, metadata, isLoading } = useFiltered311();
   const store = useRequests311Store();
 
@@ -102,6 +107,15 @@ export default function Requests311Page() {
           selected={store.districts}
           onChange={store.setDistricts}
         />
+        <div className="ml-auto">
+          <DownloadButton
+            domain="311"
+            columns={cols311}
+            filteredData={filteredData}
+            fullData={rawPayload?.records ?? []}
+            isLoading={isLoading}
+          />
+        </div>
       </div>
 
       {/* KPI Banner */}

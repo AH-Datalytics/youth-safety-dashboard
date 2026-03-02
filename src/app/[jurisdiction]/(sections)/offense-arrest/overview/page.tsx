@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useEffect } from "react";
-import { useFilteredIncidents } from "@/hooks/use-incidents";
+import { useIncidents, useFilteredIncidents } from "@/hooks/use-incidents";
 import { useOffenseStore } from "@/stores/offense-store";
+import { DownloadButton } from "@/components/ui/download-button";
+import { DOWNLOAD_DOMAINS } from "@/config/download-columns";
 import { computeMonthly, computeYTD, computeYTDByType } from "@/lib/measures";
 import { MonthlyBarChart } from "@/components/charts/monthly-bar-chart";
 import { YtdChangeTable } from "@/components/charts/ytd-change-table";
@@ -29,7 +31,10 @@ function defaultDateFrom(): string {
   return `${year}-01-01`;
 }
 
+const incidentsCols = DOWNLOAD_DOMAINS.find((d) => d.domainId === "incidents")!.columns;
+
 export default function OffenseOverviewPage() {
+  const { data: rawPayload } = useIncidents();
   const { filteredData, hourly, nibrsTree, metadata, isLoading } = useFilteredIncidents();
   const store = useOffenseStore();
 
@@ -152,6 +157,15 @@ export default function OffenseOverviewPage() {
                 Clear filters
               </button>
             )}
+            <div className="ml-auto">
+              <DownloadButton
+                domain="incidents"
+                columns={incidentsCols}
+                filteredData={filteredData}
+                fullData={rawPayload?.records ?? []}
+                isLoading={isLoading}
+              />
+            </div>
           </div>
 
           {/* Case Status Tabs */}
