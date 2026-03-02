@@ -3,40 +3,72 @@
 import { useMemo } from "react";
 import { useFilteredCampus } from "@/hooks/use-campus";
 import { useCampusStore } from "@/stores/campus-store";
-import { groupByKey, topN } from "@/lib/measures";
-import { KPICard } from "@/components/ui/kpi-card";
-import { TrendChart } from "@/components/charts/trend-chart";
 import { BarChartHorizontal } from "@/components/charts/bar-chart-horizontal";
-import { DonutChart } from "@/components/charts/donut-chart";
+import { CompStatDisciplineTable } from "@/components/charts/compstat-discipline-table";
+import { DotMap, type DotMapPoint } from "@/components/charts/dot-map";
 import { MultiSelect } from "@/components/filters/multi-select";
-import { KPIBannerSkeleton, ChartSkeleton } from "@/components/ui/loading-skeleton";
+import { ChartSkeleton } from "@/components/ui/loading-skeleton";
 
-export default function SchoolIncidentsPage() {
-  const { filteredData, metadata, isLoading } = useFilteredCampus();
+/** Instruction type color map for dot map */
+const INSTRUCTION_COLOR_MAP: Record<string, string> = {
+  Regular: "#2563eb",
+  Alternative: "#7C3AED",
+  DAEP: "#f59e0b",
+  JJAEP: "#65bc7b",
+};
+
+/** Strip " INSTRUCTIONAL" suffix for cleaner labels */
+function cleanInstructionType(raw: string): string {
+  return raw.replace(/ INSTRUCTIONAL$/i, "").trim();
+}
+
+export default function SchoolDisciplinePage() {
+  const { filteredData, compStatRecords, filteredSchools, schoolNameOptions, metadata, isLoading } =
+    useFilteredCampus();
   const store = useCampusStore();
 
-  const total = useMemo(() => filteredData.reduce((s, r) => s + r.c, 0), [filteredData]);
-
-  const bySY = useMemo(() => {
+  // Bar chart: Incident Reasons (section W)
+  const incidentReasons = useMemo(() => {
     const map = new Map<string, number>();
     for (const r of filteredData) {
-      map.set(r.sy, (map.get(r.sy) ?? 0) + r.c);
+      if (r.se !== "W-REASON INCIDENT COUNTS" || r.tp !== "Incident Type") continue;
+      map.set(r.ds, (map.get(r.ds) ?? 0) + r.v);
     }
     return Array.from(map.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([month, count]) => ({ month, count }));
+      .sort(([, a], [, b]) => b - a)
+      .map(([key, count]) => ({ key, count }));
   }, [filteredData]);
 
-  const byCategory = useMemo(() => groupByKey(filteredData, (r) => r.ca), [filteredData]);
-  const byCampus = useMemo(() => topN(filteredData, (r) => r.cn, 15), [filteredData]);
-  const byRace = useMemo(() => groupByKey(filteredData, (r) => r.ra), [filteredData]);
-  const bySex = useMemo(() => groupByKey(filteredData, (r) => r.sx), [filteredData]);
-  const byGrade = useMemo(() => groupByKey(filteredData, (r) => r.gr), [filteredData]);
+  // Bar chart: Discipline Actions (section X)
+  const disciplineActions = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const r of filteredData) {
+      if (r.se !== "X-DISCIPLINE ACTION COUNTS" || r.tp !== "Incident Type") continue;
+      map.set(r.ds, (map.get(r.ds) ?? 0) + r.v);
+    }
+    return Array.from(map.entries())
+      .sort(([, a], [, b]) => b - a)
+      .map(([key, count]) => ({ key, count }));
+  }, [filteredData]);
+
+  // School dot map points — colored by cleaned instruction type
+  const schoolPoints: DotMapPoint[] = useMemo(() => {
+    return filteredSchools
+      .filter((s) => s.lat && s.lon)
+      .map((s) => ({
+        lat: s.lat,
+        lon: s.lon,
+        category: cleanInstructionType(s.instructionType),
+        count: s.enrollment || 1,
+        label: s.name,
+      }));
+  }, [filteredSchools]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-6">
-      <h1 className="font-serif text-lg md:text-xl font-bold">Disciplinary Incidents</h1>
+      <h1 className="font-serif text-lg md:text-xl font-bold">School Discipline</h1>
 
+      {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-lg border border-border sticky top-0 z-50">
         {metadata?.schoolYears && (
           <select
@@ -46,41 +78,53 @@ export default function SchoolIncidentsPage() {
           >
             <option value="">All School Years</option>
             {metadata.schoolYears.map((sy) => (
-              <option key={sy} value={sy}>{sy}</option>
+              <option key={sy} value={sy}>
+                {sy}
+              </option>
             ))}
           </select>
         )}
+
+        <select
+          value={store.schoolType ?? ""}
+          onChange={(e) => {
+            store.setSchoolType(e.target.value || null);
+            store.setSchoolNames([]); // reset names when type changes
+          }}
+          className="border border-border rounded px-2 py-1 text-sm bg-white"
+        >
+          <option value="">All School Types</option>
+          <option value="INDEPENDENT">Traditional ISD/CSD</option>
+          <option value="CHARTER">Open Enrollment Charter</option>
+        </select>
+
         <MultiSelect
-          label="Campus"
-          options={metadata?.campuses ?? []}
-          selected={store.campuses}
-          onChange={store.setCampuses}
+          label="School Name"
+          options={schoolNameOptions}
+          selected={store.schoolNames}
+          onChange={store.setSchoolNames}
         />
         <MultiSelect
-          label="Category"
-          options={metadata?.categories ?? []}
-          selected={store.categories}
-          onChange={store.setCategories}
-        />
-        <MultiSelect
-          label="Race"
-          options={metadata?.races ?? []}
-          selected={store.races}
-          onChange={store.setRaces}
+          label="Section"
+          options={metadata?.sections ?? []}
+          selected={store.sections}
+          onChange={store.setSections}
         />
       </div>
 
+      {/* CompStat Table */}
       {isLoading ? (
-        <KPIBannerSkeleton />
+        <ChartSkeleton />
       ) : (
-        <div className="bg-primary rounded-lg grid grid-cols-2 md:grid-cols-4 divide-x divide-white/10">
-          <KPICard label="Total Incidents" value={total} />
-          <KPICard label="Campuses" value={metadata?.campuses?.length ?? 0} />
-          <KPICard label="Categories" value={metadata?.categories?.length ?? 0} />
-          <KPICard label="School Years" value={metadata?.schoolYears?.length ?? 0} />
-        </div>
+        <CompStatDisciplineTable
+          records={compStatRecords}
+          schoolYears={metadata?.schoolYears ?? []}
+          selectedYear={store.schoolYear}
+          title="Discipline Summary by School Year"
+        />
       )}
 
+      {/* Bar Charts: 2-col grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {isLoading ? (
           <>
@@ -89,33 +133,22 @@ export default function SchoolIncidentsPage() {
           </>
         ) : (
           <>
-            <TrendChart data={bySY} title="Incidents by School Year" />
-            <BarChartHorizontal data={byCategory} title="Incidents by Category" />
+            <BarChartHorizontal data={incidentReasons} title="Incident Reasons" />
+            <BarChartHorizontal data={disciplineActions} title="Discipline Actions" />
           </>
         )}
       </div>
 
-      {isLoading ? (
-        <ChartSkeleton />
-      ) : (
-        <BarChartHorizontal data={byCampus} title="Top Campuses by Incident Count" />
+      {/* Dot Map */}
+      {!isLoading && schoolPoints.length > 0 && (
+        <DotMap
+          points={schoolPoints}
+          colorMap={INSTRUCTION_COLOR_MAP}
+          defaultColor="#7C3AED"
+          title="School Locations by Instruction Type"
+          height={400}
+        />
       )}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {isLoading ? (
-          <>
-            <ChartSkeleton />
-            <ChartSkeleton />
-            <ChartSkeleton />
-          </>
-        ) : (
-          <>
-            <DonutChart data={byRace} title="Race Distribution" />
-            <DonutChart data={bySex} title="Sex Distribution" />
-            <DonutChart data={byGrade} title="Grade Distribution" />
-          </>
-        )}
-      </div>
     </div>
   );
 }

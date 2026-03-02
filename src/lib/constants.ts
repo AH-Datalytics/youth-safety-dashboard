@@ -51,20 +51,31 @@ export const SECTIONS = [
     href: "/offense-arrest/overview",
     pages: [
       { id: "overview", label: "Overview", href: "/offense-arrest/overview" },
-      { id: "time-of-day", label: "Time of Day", href: "/offense-arrest/time-of-day" },
-      { id: "map", label: "Map", href: "/offense-arrest/map" },
-      { id: "arrests", label: "Arrests", href: "/offense-arrest/arrests" },
+      { id: "arrests", label: "Demographics", href: "/offense-arrest/arrests" },
     ],
   },
   {
     id: "cfs-311",
-    label: "CFS & 311",
+    label: "CFS",
     href: "/cfs-311/overview",
     pages: [
       { id: "overview", label: "Overview", href: "/cfs-311/overview" },
-      { id: "time-of-day", label: "Time of Day", href: "/cfs-311/time-of-day" },
-      { id: "map", label: "Map", href: "/cfs-311/map" },
-      { id: "requests", label: "311 Requests", href: "/cfs-311/requests" },
+    ],
+  },
+  {
+    id: "311",
+    label: "311",
+    href: "/cfs-311/requests",
+    pages: [
+      { id: "requests", label: "Requests", href: "/cfs-311/requests" },
+    ],
+  },
+  {
+    id: "map",
+    label: "Map",
+    href: "/map",
+    pages: [
+      { id: "map", label: "Map", href: "/map" },
     ],
   },
   {
@@ -73,7 +84,6 @@ export const SECTIONS = [
     href: "/youth-court/referrals",
     pages: [
       { id: "referrals", label: "Referrals", href: "/youth-court/referrals" },
-      { id: "trends", label: "Over Time", href: "/youth-court/trends" },
     ],
   },
   {
@@ -81,8 +91,7 @@ export const SECTIONS = [
     label: "School Discipline",
     href: "/school-discipline/incidents",
     pages: [
-      { id: "incidents", label: "Incidents", href: "/school-discipline/incidents" },
-      { id: "outcomes", label: "Outcomes", href: "/school-discipline/outcomes" },
+      { id: "incidents", label: "Overview", href: "/school-discipline/incidents" },
     ],
   },
 ] as const;

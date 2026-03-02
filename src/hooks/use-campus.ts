@@ -1,7 +1,8 @@
 "use client";
 
+import { useMemo } from "react";
 import useSWR from "swr";
-import type { CampusPayload, CampusRecord } from "@/lib/types";
+import type { CampusPayload, CampusRecord, CampusSchool } from "@/lib/types";
 import { useCampusStore } from "@/stores/campus-store";
 import { SWR_CONFIG } from "@/lib/constants";
 
@@ -24,35 +25,77 @@ export function useFilteredCampus() {
   const { data, error, isLoading } = useCampus();
   const filters = useCampusStore();
 
-  let filtered: CampusRecord[] = [];
+  // Build set of campus numbers matching schoolType + schoolNames filters
+  const schoolCnSet = useMemo(() => {
+    if (!data?.schools) return null;
+    if (!filters.schoolType && filters.schoolNames.length === 0) return null;
 
-  if (data?.records) {
-    filtered = data.records.filter((r) => {
+    const set = new Set<number>();
+    for (const s of data.schools) {
+      // Filter by school (district) type
+      if (filters.schoolType && s.districtType !== filters.schoolType) continue;
+      // Filter by school name
+      if (filters.schoolNames.length > 0 && !filters.schoolNames.includes(s.name)) continue;
+      set.add(s.cn);
+    }
+    return set;
+  }, [data?.schools, filters.schoolType, filters.schoolNames]);
+
+  const filtered = useMemo(() => {
+    if (!data?.records) return [];
+    return data.records.filter((r) => {
       if (filters.schoolYear && r.sy !== filters.schoolYear) return false;
       if (filters.campuses.length > 0 && !filters.campuses.includes(r.cn)) return false;
-      if (filters.categories.length > 0 && !filters.categories.includes(r.ca)) return false;
-      if (filters.incidentTypes.length > 0 && !filters.incidentTypes.includes(r.in)) return false;
-      if (filters.actions.length > 0 && !filters.actions.includes(r.ac)) return false;
-      if (filters.races.length > 0 && !filters.races.includes(r.ra)) return false;
-      if (filters.sexes.length > 0 && !filters.sexes.includes(r.sx)) return false;
-      if (filters.grades.length > 0 && !filters.grades.includes(r.gr)) return false;
+      if (filters.types.length > 0 && !filters.types.includes(r.tp)) return false;
+      if (filters.sections.length > 0 && !filters.sections.includes(r.se)) return false;
+      if (schoolCnSet && !schoolCnSet.has(r.cn)) return false;
       return true;
     });
-  }
+  }, [data?.records, filters.schoolYear, filters.campuses, filters.types, filters.sections, schoolCnSet]);
+
+  // Records filtered by everything EXCEPT schoolYear — for CompStat table multi-year view
+  const compStatRecords = useMemo(() => {
+    if (!data?.records) return [];
+    return data.records.filter((r) => {
+      if (filters.campuses.length > 0 && !filters.campuses.includes(r.cn)) return false;
+      if (filters.types.length > 0 && !filters.types.includes(r.tp)) return false;
+      if (filters.sections.length > 0 && !filters.sections.includes(r.se)) return false;
+      if (schoolCnSet && !schoolCnSet.has(r.cn)) return false;
+      return true;
+    });
+  }, [data?.records, filters.campuses, filters.types, filters.sections, schoolCnSet]);
+
+  // Schools filtered by schoolType + schoolNames (for map)
+  const filteredSchools = useMemo(() => {
+    if (!data?.schools) return [];
+    if (!schoolCnSet) return data.schools;
+    return data.schools.filter((s) => schoolCnSet.has(s.cn));
+  }, [data?.schools, schoolCnSet]);
+
+  // Sorted school name options (respects schoolType filter)
+  const schoolNameOptions = useMemo(() => {
+    if (!data?.schools) return [];
+    let pool = data.schools;
+    if (filters.schoolType) {
+      pool = pool.filter((s) => s.districtType === filters.schoolType);
+    }
+    return pool.map((s) => s.name).sort();
+  }, [data?.schools, filters.schoolType]);
 
   return {
     filteredData: filtered,
+    compStatRecords,
+    schools: data?.schools ?? [],
+    filteredSchools,
+    schoolNameOptions,
     metadata: data
       ? {
           lastUpdated: data.lastUpdated,
           schoolYears: data.schoolYears,
-          campuses: data.campuses,
-          categories: data.categories,
-          incidentTypes: data.incidentTypes,
-          actions: data.actions,
-          races: data.races,
-          sexes: data.sexes,
-          grades: data.grades,
+          sections: data.sections,
+          types: data.types,
+          headingNames: data.headingNames,
+          descriptions: data.descriptions ?? [],
           summary: data.summary,
         }
       : null,
