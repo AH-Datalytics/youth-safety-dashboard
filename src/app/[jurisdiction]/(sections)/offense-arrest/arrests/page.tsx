@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useEffect } from "react";
-import { useFilteredArrests } from "@/hooks/use-arrests";
+import { useArrests, useFilteredArrests } from "@/hooks/use-arrests";
 import { useArrestStore, type DemographicTab } from "@/stores/arrest-store";
+import { DownloadButton } from "@/components/ui/download-button";
+import { DOWNLOAD_DOMAINS } from "@/config/download-columns";
 import { computeYTD, topN } from "@/lib/measures";
 import { KPICard } from "@/components/ui/kpi-card";
 import { BarChartHorizontal } from "@/components/charts/bar-chart-horizontal";
@@ -19,7 +21,10 @@ const DEMOGRAPHIC_TABS: { key: DemographicTab; label: string }[] = [
   { key: "race", label: "Race" },
 ];
 
+const arrestsCols = DOWNLOAD_DOMAINS.find((d) => d.domainId === "arrests")!.columns;
+
 export default function ArrestsPage() {
+  const { data: rawPayload } = useArrests();
   const { filteredData, metadata, isLoading } = useFilteredArrests();
   const store = useArrestStore();
 
@@ -128,6 +133,15 @@ export default function ArrestsPage() {
               Clear filters
             </button>
           )}
+          <div className="ml-auto">
+            <DownloadButton
+              domain="arrests"
+              columns={arrestsCols}
+              filteredData={filteredData}
+              fullData={rawPayload?.records ?? []}
+              isLoading={isLoading}
+            />
+          </div>
         </div>
 
         {/* Demographic breakdown selector — controls chart grouping */}

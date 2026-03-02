@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { useFilteredTJJD } from "@/hooks/use-tjjd";
+import { useTJJD, useFilteredTJJD } from "@/hooks/use-tjjd";
 import { useTJJDStore } from "@/stores/tjjd-store";
+import { DownloadButton } from "@/components/ui/download-button";
+import { DOWNLOAD_DOMAINS } from "@/config/download-columns";
 import { BarChartHorizontal } from "@/components/charts/bar-chart-horizontal";
 import { BrushBarChart } from "@/components/charts/brush-bar-chart";
 import { ChoroplethMap } from "@/components/charts/choropleth-map";
@@ -18,7 +20,10 @@ const CATEGORIES = [
   "Race/Ethnicity",
 ];
 
+const tjjdCols = DOWNLOAD_DOMAINS.find((d) => d.domainId === "tjjd")!.columns;
+
 export default function YouthCourtReferralsPage() {
+  const { data: rawPayload } = useTJJD();
   const { filteredData, rangeTotal, zipRecords, monthlyTimeSeries, isLoading } =
     useFilteredTJJD();
   const store = useTJJDStore();
@@ -39,15 +44,24 @@ export default function YouthCourtReferralsPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-6">
       {/* Title + total */}
-      <div className="flex items-baseline justify-between">
+      <div className="flex items-baseline justify-between gap-3">
         <h1 className="font-serif text-lg md:text-xl font-bold">
           Youth Court Referrals
         </h1>
-        {!isLoading && (
-          <span className="font-mono text-lg font-bold text-primary">
-            {rangeTotal.toLocaleString()} referrals
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          {!isLoading && (
+            <span className="font-mono text-lg font-bold text-primary">
+              {rangeTotal.toLocaleString()} referrals
+            </span>
+          )}
+          <DownloadButton
+            domain="tjjd"
+            columns={tjjdCols}
+            filteredData={filteredData}
+            fullData={rawPayload?.records ?? []}
+            isLoading={isLoading}
+          />
+        </div>
       </div>
 
       {/* Monthly bar chart with brush */}

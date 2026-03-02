@@ -16,6 +16,7 @@ export function Header() {
   const sections = getSections(config);
 
   const homeHref = `/${config.id}`;
+  const downloadsHref = `/${config.id}/downloads`;
   const aboutHref = `/${config.id}/about`;
 
   // Check exact page match first (avoids /cfs-311/requests matching "cfs-311" section instead of "311")
@@ -68,6 +69,15 @@ export function Header() {
               {section.label}
             </Link>
           ))}
+          <Link
+            href={downloadsHref}
+            className={cn(
+              "px-3 py-1.5 text-sm rounded transition-colors",
+              pathname === downloadsHref ? "bg-white/15 text-white" : "text-white/70 hover:text-white hover:bg-white/5",
+            )}
+          >
+            Downloads
+          </Link>
           <Link
             href={aboutHref}
             className={cn(
@@ -147,10 +157,20 @@ export function Header() {
             </div>
           ))}
           <Link
-            href={aboutHref}
+            href={downloadsHref}
             onClick={() => setMobileOpen(false)}
             className={cn(
               "block px-4 py-2.5 text-sm mt-2 border-t border-white/10",
+              pathname === downloadsHref ? "text-white bg-white/10" : "text-white/70",
+            )}
+          >
+            Downloads
+          </Link>
+          <Link
+            href={aboutHref}
+            onClick={() => setMobileOpen(false)}
+            className={cn(
+              "block px-4 py-2.5 text-sm",
               pathname === aboutHref ? "text-white bg-white/10" : "text-white/70",
             )}
           >

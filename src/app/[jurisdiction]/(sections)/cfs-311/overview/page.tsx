@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useEffect } from "react";
-import { useFilteredCFS } from "@/hooks/use-cfs";
+import { useCFS, useFilteredCFS } from "@/hooks/use-cfs";
 import { useCFSStore } from "@/stores/cfs-store";
+import { DownloadButton } from "@/components/ui/download-button";
+import { DOWNLOAD_DOMAINS } from "@/config/download-columns";
 import { computeMonthly, computeYTD, groupByKey } from "@/lib/measures";
 import { MonthlyBarChart } from "@/components/charts/monthly-bar-chart";
 import { BarChartHorizontal } from "@/components/charts/bar-chart-horizontal";
@@ -19,7 +21,10 @@ function defaultDateFrom(): string {
   return `${year}-01-01`;
 }
 
+const cfsCols = DOWNLOAD_DOMAINS.find((d) => d.domainId === "cfs")!.columns;
+
 export default function CFSOverviewPage() {
+  const { data: rawPayload } = useCFS();
   const { filteredData, hourly, categoryTree, metadata, isLoading } = useFilteredCFS();
   const store = useCFSStore();
 
@@ -98,6 +103,15 @@ export default function CFSOverviewPage() {
           selected={store.dispositionGroups}
           onChange={store.setDispositionGroups}
         />
+        <div className="ml-auto">
+          <DownloadButton
+            domain="cfs"
+            columns={cfsCols}
+            filteredData={filteredData}
+            fullData={rawPayload?.records ?? []}
+            isLoading={isLoading}
+          />
+        </div>
       </div>
 
       {/* KPI Banner */}
