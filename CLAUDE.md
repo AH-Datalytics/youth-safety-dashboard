@@ -80,6 +80,7 @@ To run locally, you need the source data files. Either:
 11. Referrals Over Time — Annual trend + stacked bars
 12. Disciplinary Incidents — SY trend + campus bars + demographics
 13. Disciplinary Outcomes — Stacked actions + disparity table
+14. **Downloads** — Card layout with CSV/Excel download for all 6 datasets
 
 ## Per-Domain File Pattern
 ```
@@ -90,6 +91,14 @@ src/stores/{domain}-store.ts         → State: Zustand filter store
 src/hooks/use-{domain}.ts            → Hooks: SWR fetch + filter application
 src/app/(sections)/{section}/*/page.tsx → Page components
 ```
+
+## Data Download Feature
+- **Column definitions**: `src/config/download-columns.ts` — maps compact JSON keys to readable headers per domain
+- **Download utility**: `src/lib/download.ts` — CSV generation, XLSX via `xlsx` package (dynamic import), browser download trigger
+- **DownloadButton component**: `src/components/ui/download-button.tsx` — dropdown with filtered/full CSV/Excel options
+- **Downloads page**: `src/app/[jurisdiction]/downloads/page.tsx` — all 6 datasets with row counts and download buttons
+- Each data page has a DownloadButton in its filter bar; raw SWR hooks (e.g. `useIncidents()`) provide full dataset, SWR deduplicates
+- File naming: `{jurisdiction}-{domain}-{variant}-{date}.{format}` (e.g. `dallas-incidents-filtered-2026-03-02.csv`)
 
 ## Commands
 ```bash
