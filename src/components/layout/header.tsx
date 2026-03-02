@@ -20,7 +20,7 @@ export function Header() {
   );
 
   return (
-    <header className="bg-primary text-white relative z-[1100]">
+    <header className="bg-black text-white relative z-[1100]">
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 h-14">
         <Link href="/" className="flex items-center gap-3 shrink-0">
@@ -29,7 +29,7 @@ export function Header() {
             alt="Lone Star Justice Alliance"
             width={120}
             height={45}
-            className="h-8 w-auto brightness-0 invert"
+            className="h-8 w-auto invert"
             priority
           />
           <span className="hidden sm:inline font-serif font-bold text-base md:text-lg">
@@ -85,7 +85,7 @@ export function Header() {
 
       {/* Page tabs for active section (desktop) */}
       {activeSection && (
-        <div className="hidden md:block bg-[#1A0F40] border-t border-white/10">
+        <div className="hidden md:block bg-[#111111] border-t border-white/10">
           <div className="max-w-7xl mx-auto px-4 flex gap-1">
             {activeSection.pages.map((page) => (
               <Link
@@ -107,7 +107,7 @@ export function Header() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <nav className="md:hidden border-t border-white/10 pb-3 bg-primary">
+        <nav className="md:hidden border-t border-white/10 pb-3 bg-black">
           <Link
             href="/"
             onClick={() => setMobileOpen(false)}

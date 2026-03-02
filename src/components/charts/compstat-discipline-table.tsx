@@ -123,7 +123,7 @@ export function CompStatDisciplineTable({
     const grandPct = gPrev === 0 ? null : (gCurr - gPrev) / gPrev;
 
     return { sections, syColumns, grandTotals, grandPct };
-  }, [records, schoolYears]);
+  }, [records, schoolYears, selectedYear]);
 
   if (syColumns.length === 0) return null;
 
