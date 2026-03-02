@@ -1,138 +1,67 @@
-"use client";
+import Image from "next/image";
+import Link from "next/link";
+import { JURISDICTIONS } from "@/lib/jurisdictions";
 
-import useSWR from "swr";
-import { AppShell } from "@/components/layout";
-import { KPIBanner } from "@/components/overview/kpi-banner";
-import { DomainCard } from "@/components/overview/domain-card";
-
-// ---- Types ----
-
-interface BannerKPI {
-  count: number;
-  pctChange: number | null;
-}
-
-interface CardSummary {
-  ytdCount: number;
-  ytdPctChange: number | null;
-  monthlyData: Array<{ month: string; count: number }>;
-}
-
-interface OverviewData {
-  banner: {
-    offenses: BannerKPI;
-    arrests: BannerKPI;
-    cfs: BannerKPI;
-    requests311: BannerKPI;
-  };
-  offenseArrest: CardSummary | null;
-  cfs311: CardSummary | null;
-  youthCourt: CardSummary | null;
-  schoolDiscipline: CardSummary | null;
-}
-
-// ---- Data fetcher ----
-
-const fetcher = async (url: string) => {
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  return res.json();
-};
-
-// ---- Component ----
-
-export default function HomePage() {
-  const { data, isLoading } = useSWR<OverviewData>(
-    "/api/overview-summary",
-    fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 60000 }
-  );
-
+export default function LandingPage() {
   return (
-    <AppShell>
-      <div className="p-4 md:p-6 max-w-7xl mx-auto">
-        {/* Hero */}
-        <div className="mb-6">
-          <h1 className="font-serif text-2xl md:text-3xl font-bold text-primary">
-            Dallas Youth Safety Dashboard
+    <div className="min-h-screen bg-[#faf9f6]">
+      <header className="bg-black text-white py-6 px-4">
+        <div className="max-w-5xl mx-auto">
+          <h1 className="font-serif text-2xl font-bold">
+            Youth Safety Dashboards
           </h1>
-          <p className="text-sm text-[#666] mt-1">
-            Built for the Lone Star Justice Alliance by AH Datalytics
+          <p className="text-white/60 text-sm mt-1">
+            Powered by AH Datalytics
           </p>
         </div>
+      </header>
 
-        {/* KPI Banner */}
-        <KPIBanner
-          offenses={data?.banner?.offenses ?? null}
-          arrests={data?.banner?.arrests ?? null}
-          cfs={data?.banner?.cfs ?? null}
-          requests311={data?.banner?.requests311 ?? null}
-          isLoading={isLoading}
-        />
-
-        {/* Section cards grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <DomainCard
-            title="Offense & Arrest"
-            href="/offense-arrest/overview"
-            ytdCount={data?.offenseArrest?.ytdCount ?? null}
-            ytdPctChange={data?.offenseArrest?.ytdPctChange ?? null}
-            monthlyData={data?.offenseArrest?.monthlyData ?? []}
-            isLoading={isLoading}
-          />
-          <DomainCard
-            title="CFS & 311"
-            href="/cfs-311/overview"
-            ytdCount={data?.cfs311?.ytdCount ?? null}
-            ytdPctChange={data?.cfs311?.ytdPctChange ?? null}
-            monthlyData={data?.cfs311?.monthlyData ?? []}
-            isLoading={isLoading}
-          />
-          <DomainCard
-            title="Youth Court"
-            href="/youth-court/referrals"
-            ytdCount={data?.youthCourt?.ytdCount ?? null}
-            ytdPctChange={data?.youthCourt?.ytdPctChange ?? null}
-            monthlyData={data?.youthCourt?.monthlyData ?? []}
-            isLoading={isLoading}
-            valueLabel="Latest School Year"
-          />
-          <DomainCard
-            title="School Discipline"
-            href="/school-discipline/incidents"
-            ytdCount={data?.schoolDiscipline?.ytdCount ?? null}
-            ytdPctChange={data?.schoolDiscipline?.ytdPctChange ?? null}
-            monthlyData={data?.schoolDiscipline?.monthlyData ?? []}
-            isLoading={isLoading}
-            valueLabel="Latest School Year"
-          />
+      <main className="max-w-5xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {JURISDICTIONS.map((j) => (
+            <Link
+              key={j.id}
+              href={`/${j.id}`}
+              className="group block bg-white rounded-lg border border-[#e8e8e8] p-6 hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <Image
+                  src={j.logo}
+                  alt={j.org}
+                  width={80}
+                  height={30}
+                  className="h-6 w-auto"
+                />
+                <span
+                  className="inline-block px-2 py-0.5 text-xs font-semibold rounded-full text-white"
+                  style={{ backgroundColor: j.colors.primary }}
+                >
+                  {j.domains.length} domains
+                </span>
+              </div>
+              <h2 className="font-serif text-lg font-bold text-[#1a1a1a] group-hover:text-[#2C1A6B] transition-colors">
+                {j.name}
+              </h2>
+              <p className="text-sm text-[#6b7280] mt-1">{j.org}</p>
+              <p className="text-xs text-[#9ca3af] mt-2">{j.description}</p>
+            </Link>
+          ))}
         </div>
+      </main>
 
-        {/* Data Sources */}
-        <section className="mt-8">
-          <h2 className="text-sm font-semibold text-[#666] uppercase tracking-wider mb-4 border-t border-primary pt-4">
-            Data Sources
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div>
-              <h3 className="font-semibold mb-1">Open Data (Socrata API)</h3>
-              <ul className="text-[#666] space-y-1">
-                <li>Dallas Police Incidents (2017–present)</li>
-                <li>Dallas Arrests</li>
-                <li>311 Service Requests</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-1">Partner Data</h3>
-              <ul className="text-[#666] space-y-1">
-                <li>Dallas Police Calls for Service</li>
-                <li>TJJD Youth Court Referrals</li>
-                <li>TEA CAMPUS Disciplinary Data</li>
-              </ul>
-            </div>
-          </div>
-        </section>
-      </div>
-    </AppShell>
+      <footer className="border-t border-[#e8e8e8] bg-white py-4 px-4 text-center">
+        <p className="text-xs text-[#666]">
+          Powered by{" "}
+          <a
+            href="https://ahdatalytics.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold hover:underline"
+          >
+            AH Datalytics
+          </a>
+        </p>
+      </footer>
+    </div>
   );
 }

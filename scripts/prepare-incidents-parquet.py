@@ -239,14 +239,19 @@ def main():
 
     # Also output a lightweight CSV for the TypeScript ETL
     # (avoids re-downloading 850MB+ in the TS pipeline)
+    # Includes: date, offense, category, district, zip, nibrs, hour, case_status, lat, lon
     etl_csv = OUTPUT_DIR / "_incidents-etl.csv"
     etl_cols = {
-        "date": "Date1 of Occurrence",
         "offense": pick_col(["Offense_Incident", "offincident", "Offense Incident"], cols),
         "category": pick_col(["NIBRS Crime Category", "nibrs_crime_category"], cols),
         "district": pick_col(["Division", "district", "District"], cols),
         "zip": pick_col(["Zip Code", "zip_code"], cols),
         "nibrs": pick_col(["NIBRS Crime", "nibrs_crime"], cols),
+        "ucr_disp": pick_col(["UCR Disposition", "ucr_disp"], cols),
+        "time1": pick_col(["Time1 of Occurrence", "Time1", "time1"], cols),
+        "location": pick_col(
+            ["Full Location", "Location1", "Location 1", "Location", "geocoded_column"], cols
+        ),
     }
 
     # Read from the original CSV (before column renaming), filter 2017+
@@ -259,13 +264,43 @@ def main():
 
         etl_df = pd.DataFrame()
         etl_df["date"] = df_orig["_date_str"]
+
         for out_name, src_col in etl_cols.items():
-            if out_name == "date":
-                continue
             if src_col and src_col in df_orig.columns:
                 etl_df[out_name] = df_orig[src_col].fillna("").astype(str).str.strip()
             else:
                 etl_df[out_name] = ""
+
+        # Extract hour from time1 column
+        def _parse_hour_str(val):
+            if not val or pd.isna(val) or str(val).strip() == "":
+                return ""
+            s = str(val)
+            m = re.match(r"^(\d{1,2}):", s)
+            if m:
+                h = int(m.group(1))
+                return str(h) if 0 <= h < 24 else ""
+            return ""
+
+        if "time1" in etl_df.columns:
+            etl_df["hour"] = etl_df["time1"].apply(_parse_hour_str)
+            etl_df = etl_df.drop(columns=["time1"])
+        else:
+            etl_df["hour"] = ""
+
+        # Extract lat/lon from location column
+        if "location" in etl_df.columns:
+            coords = etl_df["location"].apply(lambda x: extract_lonlat(x))
+            etl_df["lat"] = coords.apply(lambda x: str(x[1]) if x[1] is not None else "")
+            etl_df["lon"] = coords.apply(lambda x: str(x[0]) if x[0] is not None else "")
+            etl_df = etl_df.drop(columns=["location"])
+        else:
+            etl_df["lat"] = ""
+            etl_df["lon"] = ""
+
+        # Rename ucr_disp → case_status (keep raw value; TS ETL will map to labels)
+        if "ucr_disp" in etl_df.columns:
+            etl_df = etl_df.rename(columns={"ucr_disp": "case_status"})
 
         etl_df.to_csv(etl_csv, index=False)
         etl_size_mb = os.path.getsize(etl_csv) / (1024 * 1024)

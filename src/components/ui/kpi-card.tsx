@@ -9,9 +9,11 @@ interface KPICardProps {
   priorValue?: number;
   pctChange?: number;
   loading?: boolean;
+  /** Decimal places for value display (default: 0) */
+  decimals?: number;
 }
 
-export function KPICard({ label, value, priorValue, pctChange, loading }: KPICardProps) {
+export function KPICard({ label, value, priorValue, pctChange, loading, decimals = 0 }: KPICardProps) {
   if (loading) {
     return (
       <div className="p-4 animate-pulse">
@@ -29,7 +31,7 @@ export function KPICard({ label, value, priorValue, pctChange, loading }: KPICar
     <div className="p-4">
       <p className="text-xs text-white/60 uppercase tracking-wider font-sans mb-1">{label}</p>
       <p className="text-2xl md:text-3xl font-bold font-serif tabular-nums text-white">
-        {formatNumber(value)}
+        {decimals > 0 ? value.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) : formatNumber(value)}
       </p>
       {pctChange !== undefined && priorValue !== undefined && (
         <div className="flex items-center gap-1.5 mt-1">

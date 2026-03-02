@@ -24,9 +24,9 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dallas Youth Safety Dashboard",
+  title: "Youth Safety Dashboards",
   description:
-    "Public safety data dashboard for Dallas County youth — powered by Lone Star Justice Alliance and AH Datalytics",
+    "Public safety data dashboards — powered by AH Datalytics",
 };
 
 export default function RootLayout({

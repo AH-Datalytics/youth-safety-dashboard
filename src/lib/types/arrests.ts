@@ -2,14 +2,16 @@
 export interface ArrestRecord {
   /** date YYYY-MM-DD */
   d: string;
-  /** charge description */
+  /** charge description (araction) */
   ch: string;
   /** race */
   ra: string;
   /** sex */
   sx: string;
-  /** age group (Juvenile, 17-24, 25-34, 35-44, 45+) */
+  /** age group broad (18-24, 25-40, 41-55, 56-70, Over 70) — per PBI */
   ag: string;
+  /** young adult binary (Young Adult (18-24) or Adult (25+)) — per PBI */
+  ya: string;
   /** council district */
   di: string;
   /** count */
@@ -24,6 +26,7 @@ export interface ArrestPayload {
   races: string[];
   sexes: string[];
   ageGroups: string[];
+  youngAdultGroups: string[];
   districts: string[];
   summary: {
     total: number;

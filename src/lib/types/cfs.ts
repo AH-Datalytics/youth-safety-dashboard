@@ -2,16 +2,24 @@
 export interface CFSRecord {
   /** date YYYY-MM-DD */
   d: string;
-  /** call type */
+  /** call type (Problem field from source) */
   ct: string;
-  /** priority */
+  /** category (from crosswalk: Medical, NIBRS Person, etc.) */
+  cat: string;
+  /** sub-category (from crosswalk) */
+  sc: string;
+  /** priority label (Emergency, Urgent, General Service, Non-Critical) */
   pr: string;
-  /** district */
+  /** district (MDivision) */
   di: string;
-  /** nature of call */
-  na: string;
+  /** disposition group (from crosswalk) */
+  dg: string;
   /** count */
   c: number;
+  /** avg response time minutes (for this aggregation bucket) */
+  rt: number;
+  /** avg time spent minutes */
+  ts: number;
 }
 
 /** Hourly distribution row */
@@ -24,18 +32,29 @@ export interface CFSHourly {
   c: number;
 }
 
+/** NIBRS-style tree node for call type hierarchy */
+export interface CFSTreeNode {
+  category: string;
+  subCategories: string[];
+}
+
 export interface CFSPayload {
   lastUpdated: string;
   dataThrough: string;
   records: CFSRecord[];
   hourly: CFSHourly[];
   callTypes: string[];
+  categories: string[];
+  subCategories: string[];
   priorities: string[];
   districts: string[];
-  natures: string[];
+  dispositionGroups: string[];
+  categoryTree: CFSTreeNode[];
   summary: {
     total: number;
     avgDaily: number;
+    avgResponseTime: number;
+    avgTimeSpent: number;
     ytdCurrent: number;
     ytdPrior: number;
     pctChange: number;

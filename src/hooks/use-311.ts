@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import type { Request311Payload, Request311Record } from "@/lib/types";
 import { useRequests311Store } from "@/stores/requests311-store";
+import { useApiUrl } from "@/hooks/use-api-url";
 import { SWR_CONFIG } from "@/lib/constants";
 
 const fetcher = async (url: string) => {
@@ -12,8 +13,9 @@ const fetcher = async (url: string) => {
 };
 
 export function use311() {
+  const url = useApiUrl("311");
   const { data, error, isLoading } = useSWR<Request311Payload>(
-    "/api/311",
+    url,
     fetcher,
     SWR_CONFIG,
   );
@@ -33,6 +35,7 @@ export function useFiltered311() {
       if (filters.requestTypes.length > 0 && !filters.requestTypes.includes(r.rt)) return false;
       if (filters.departments.length > 0 && !filters.departments.includes(r.dp)) return false;
       if (filters.statuses.length > 0 && !filters.statuses.includes(r.st)) return false;
+      if (filters.priorityGroups.length > 0 && !filters.priorityGroups.includes(r.pg)) return false;
       if (filters.districts.length > 0 && !filters.districts.includes(r.di)) return false;
       if (filters.zipCodes.length > 0 && !filters.zipCodes.includes(r.zi)) return false;
       return true;
@@ -41,6 +44,7 @@ export function useFiltered311() {
 
   return {
     filteredData: filtered,
+    points: data?.points ?? [],
     metadata: data
       ? {
           lastUpdated: data.lastUpdated,
@@ -48,6 +52,7 @@ export function useFiltered311() {
           requestTypes: data.requestTypes,
           departments: data.departments,
           statuses: data.statuses,
+          priorityGroups: data.priorityGroups,
           districts: data.districts,
           zipCodes: data.zipCodes,
           summary: data.summary,

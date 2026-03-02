@@ -1,10 +1,12 @@
 /**
  * Data Refresh Orchestrator
- * Runs all 6 ETL pipelines and writes JSON + JSON.gz output
+ * Loops over all registered jurisdictions and runs ETL pipelines per jurisdiction.
  */
 import fs from "fs";
 import path from "path";
 import zlib from "zlib";
+import { JURISDICTIONS } from "../src/lib/jurisdictions";
+import type { JurisdictionConfig } from "../src/lib/jurisdictions";
 import { runIncidentsETL } from "./etl-incidents";
 import { runArrestsETL } from "./etl-arrests";
 import { run311ETL } from "./etl-311";
@@ -13,8 +15,6 @@ import { runCampusETL } from "./etl-campus";
 import { runTJJDETL } from "./etl-tjjd";
 import { computeOverviewSummary } from "./compute-overview-summary";
 
-const OUTPUT_DIR = path.join(process.cwd(), "data", "generated");
-
 interface ETLResult {
   name: string;
   status: "OK" | "FAILED";
@@ -22,10 +22,12 @@ interface ETLResult {
   error?: string;
 }
 
+let currentOutputDir = "";
+
 function writeOutput(name: string, payload: unknown): void {
   const json = JSON.stringify(payload);
-  const jsonPath = path.join(OUTPUT_DIR, `${name}-data.json`);
-  const gzPath = path.join(OUTPUT_DIR, `${name}-data.json.gz`);
+  const jsonPath = path.join(currentOutputDir, `${name}-data.json`);
+  const gzPath = path.join(currentOutputDir, `${name}-data.json.gz`);
 
   fs.writeFileSync(jsonPath, json);
   fs.writeFileSync(gzPath, zlib.gzipSync(json));
@@ -56,61 +58,77 @@ async function runETL(
   }
 }
 
-async function main() {
-  console.log("=== Dallas Youth Safety Dashboard — Data Refresh ===");
-  console.log(`  Timestamp: ${new Date().toISOString()}`);
-  console.log("");
+async function refreshJurisdiction(j: JurisdictionConfig): Promise<ETLResult[]> {
+  currentOutputDir = path.join(process.cwd(), "data", "generated", j.id);
+  fs.mkdirSync(currentOutputDir, { recursive: true });
 
-  // Ensure output directory exists
-  if (!fs.existsSync(OUTPUT_DIR)) {
-    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  const allResults: ETLResult[] = [];
+
+  // Socrata ETLs (if configured)
+  if (j.socrata) {
+    console.log("  --- Socrata APIs (Incidents, Arrests, 311) ---");
+    const socrataResults = await Promise.all([
+      runETL("incidents", () =>
+        runIncidentsETL({ baseUrl: j.socrata!.baseUrl, datasetId: j.socrata!.incidents }),
+      ),
+      runETL("arrests", () =>
+        runArrestsETL({ baseUrl: j.socrata!.baseUrl, datasetId: j.socrata!.arrests }),
+      ),
+      runETL("311", () =>
+        run311ETL({ baseUrl: j.socrata!.baseUrl, datasetId: j.socrata!.requests311 }),
+      ),
+    ]);
+    allResults.push(...socrataResults);
   }
 
-  // Run Socrata ETLs in parallel (public APIs)
-  console.log("--- Socrata APIs (Incidents, Arrests, 311) ---");
-  const socrataResults = await Promise.all([
-    runETL("incidents", runIncidentsETL),
-    runETL("arrests", runArrestsETL),
-    runETL("311", run311ETL),
-  ]);
-
-  console.log("");
-
-  // Run local file ETLs in parallel (CFS, Campus, TJJD)
-  console.log("--- Local Files (CFS, Campus, TJJD) ---");
+  // Local file ETLs (CFS, Campus, TJJD — always run, they gracefully handle missing files)
+  console.log("  --- Local Files (CFS, Campus, TJJD) ---");
   const localResults = await Promise.all([
     runETL("cfs", runCFSETL),
     runETL("campus", runCampusETL),
     runETL("tjjd", runTJJDETL),
   ]);
+  allResults.push(...localResults);
 
-  console.log("");
-
-  // Summary
-  const allResults = [...socrataResults, ...localResults];
-  const failed = allResults.filter((r) => r.status === "FAILED");
-
-  console.log("=== Summary ===");
-  for (const r of allResults) {
-    const icon = r.status === "OK" ? "OK" : "FAILED";
-    const detail = r.status === "OK" ? `${r.rows?.toLocaleString()} rows` : r.error;
-    console.log(`  ${icon}: ${r.name} — ${detail}`);
-  }
-
-  if (failed.length > 0) {
-    console.error(`\n${failed.length} ETL(s) failed!`);
-    process.exit(1);
-  }
-
-  // Compute overview summary for homepage
-  console.log("\n--- Overview Summary ---");
+  // Overview summary
+  console.log("  --- Overview Summary ---");
   try {
-    const summary = computeOverviewSummary();
+    const summary = computeOverviewSummary(currentOutputDir);
     writeOutput("overview-summary", summary);
     console.log("  [overview-summary] OK");
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error(`  [overview-summary] FAILED: ${msg}`);
+  }
+
+  return allResults;
+}
+
+async function main() {
+  console.log("=== Youth Safety Dashboards — Data Refresh ===");
+  console.log(`  Timestamp: ${new Date().toISOString()}`);
+  console.log(`  Jurisdictions: ${JURISDICTIONS.map((j) => j.id).join(", ")}`);
+  console.log("");
+
+  let totalFailed = 0;
+
+  for (const j of JURISDICTIONS) {
+    console.log(`\n========== ${j.name} (${j.id}) ==========`);
+    const results = await refreshJurisdiction(j);
+
+    const failed = results.filter((r) => r.status === "FAILED");
+    console.log(`\n  Summary for ${j.id}:`);
+    for (const r of results) {
+      const icon = r.status === "OK" ? "OK" : "FAILED";
+      const detail = r.status === "OK" ? `${r.rows?.toLocaleString()} rows` : r.error;
+      console.log(`    ${icon}: ${r.name} — ${detail}`);
+    }
+    totalFailed += failed.length;
+  }
+
+  if (totalFailed > 0) {
+    console.error(`\n${totalFailed} ETL(s) failed across all jurisdictions!`);
+    process.exit(1);
   }
 
   console.log("\nAll ETLs completed successfully.");

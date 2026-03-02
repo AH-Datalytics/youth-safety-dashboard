@@ -28,25 +28,27 @@ interface OverviewSummary {
   banner: {
     offenses: BannerKPI;
     arrests: BannerKPI;
-    cfs: BannerKPI;
+    clearedUnder17: BannerKPI;
+    clearedOver18: BannerKPI;
     requests311: BannerKPI;
   };
   offenseArrest: CardSummary | null;
-  cfs311: CardSummary | null;
+  requests311: CardSummary | null;
   youthCourt: CardSummary | null;
   schoolDiscipline: CardSummary | null;
 }
 
 // ---- Helpers ----
 
+let dataDir = path.join(process.cwd(), "data", "generated");
+
 function loadJSON(filename: string): unknown | null {
   try {
-    const dir = path.join(process.cwd(), "data", "generated");
-    const gzPath = path.join(dir, filename + ".gz");
+    const gzPath = path.join(dataDir, filename + ".gz");
     if (fs.existsSync(gzPath)) {
       return JSON.parse(zlib.gunzipSync(fs.readFileSync(gzPath)).toString("utf-8"));
     }
-    const jsonPath = path.join(dir, filename);
+    const jsonPath = path.join(dataDir, filename);
     if (fs.existsSync(jsonPath)) {
       return JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
     }
@@ -117,7 +119,7 @@ function computeSYComparison(records: Array<{ sy: string; c: number }>) {
 // ---- Data type casts ----
 
 type IncidentsData = {
-  records?: Array<{ d: string; c: number }>;
+  records?: Array<{ d: string; c: number; cs?: string }>;
   summary?: { ytdCurrent: number; ytdPrior: number; pctChange: number };
 };
 
@@ -137,18 +139,19 @@ type Request311Data = {
 };
 
 type TJJDData = {
-  records?: Array<{ sy: string; c: number }>;
-  summary?: { totalReferrals: number; ytdCurrent: number; ytdPrior: number; pctChange: number };
+  records?: Array<{ cat: string; desc: string; yr: string; mo: number; v: number }>;
+  summary?: { totalReferrals: number };
 };
 
 type CampusData = {
-  records?: Array<{ sy: string; c: number }>;
-  summary?: { totalIncidents: number };
+  records?: Array<{ sy: string; v: number }>;
+  summary?: { totalRecords: number };
 };
 
 // ---- Main ----
 
-export function computeOverviewSummary(): OverviewSummary {
+export function computeOverviewSummary(dir?: string): OverviewSummary {
+  if (dir) dataDir = dir;
   console.log("  Loading data files...");
 
   const incidentsData = loadJSON("incidents-data.json") as IncidentsData | null;
@@ -183,6 +186,18 @@ export function computeOverviewSummary(): OverviewSummary {
   } else if (arrestsData?.records) {
     const { ytdCount, ytdPctChange } = computeYTD(arrestsData.records);
     arrestsBanner = { count: ytdCount, pctChange: ytdPctChange };
+  }
+
+  // Cleared by arrest (under 17 / over 18) — from incident case statuses
+  let clearedUnder17Banner: BannerKPI = { count: 0, pctChange: null };
+  let clearedOver18Banner: BannerKPI = { count: 0, pctChange: null };
+  if (incidentsData?.records) {
+    const u17 = incidentsData.records.filter((r) => r.cs === "Cleared (Arrestee Age 17 or Under)");
+    const o18 = incidentsData.records.filter((r) => r.cs === "Cleared (Arrestee 18 or Older)");
+    const u17ytd = computeYTD(u17);
+    const o18ytd = computeYTD(o18);
+    clearedUnder17Banner = { count: u17ytd.ytdCount, pctChange: u17ytd.ytdPctChange };
+    clearedOver18Banner = { count: o18ytd.ytdCount, pctChange: o18ytd.ytdPctChange };
   }
 
   // CFS YTD
@@ -223,38 +238,56 @@ export function computeOverviewSummary(): OverviewSummary {
     };
   }
 
-  // CFS & 311 (use CFS data for the card)
-  let cfs311Card: CardSummary | null = null;
-  if (cfsData?.records) {
-    const { ytdCount, ytdPctChange } = computeYTD(cfsData.records);
-    cfs311Card = {
+  // 311 Requests card
+  let requests311Card: CardSummary | null = null;
+  if (sr311Data?.records) {
+    const { ytdCount, ytdPctChange } = computeYTD(sr311Data.records);
+    requests311Card = {
       ytdCount,
       ytdPctChange,
-      monthlyData: toMonthly(cfsData.records),
+      monthlyData: toMonthly(sr311Data.records),
     };
   }
 
-  // Youth Court (TJJD — school year based)
+  // Youth Court (TJJD — now year-based, not school-year-based)
   let youthCourtCard: CardSummary | null = null;
-  if (tjjdData?.records) {
-    youthCourtCard = computeSYComparison(tjjdData.records);
+  if (tjjdData?.records && tjjdData.records.length > 0) {
+    // Aggregate by year
+    const byYear = new Map<string, number>();
+    for (const r of tjjdData.records) {
+      byYear.set(r.yr, (byYear.get(r.yr) || 0) + r.v);
+    }
+    const sortedYears = Array.from(byYear.keys()).sort();
+    const latest = sortedYears[sortedYears.length - 1];
+    const prior = sortedYears.length >= 2 ? sortedYears[sortedYears.length - 2] : null;
+    const latestCount = byYear.get(latest) || 0;
+    const priorCount = prior ? (byYear.get(prior) || 0) : 0;
+
+    youthCourtCard = {
+      ytdCount: latestCount,
+      ytdPctChange: priorCount > 0 ? percentChange(latestCount, priorCount) : null,
+      monthlyData: sortedYears.map(yr => ({ month: yr, count: byYear.get(yr) || 0 })),
+    };
   }
 
-  // School Discipline (Campus — school year based)
+  // School Discipline (Campus — school year based, value field is now `v`)
   let schoolDisciplineCard: CardSummary | null = null;
-  if (campusData?.records) {
-    schoolDisciplineCard = computeSYComparison(campusData.records);
+  if (campusData?.records && campusData.records.length > 0) {
+    // Map to computeSYComparison format
+    const mapped = campusData.records.map(r => ({ sy: r.sy, c: r.v }));
+    schoolDisciplineCard = computeSYComparison(mapped);
   }
 
   return {
     banner: {
       offenses: offensesBanner,
       arrests: arrestsBanner,
-      cfs: cfsBanner,
+      clearedUnder17: clearedUnder17Banner,
+      clearedOver18: clearedOver18Banner,
       requests311: sr311Banner,
     },
     offenseArrest: offenseArrestCard,
-    cfs311: cfs311Card,
+    requests311: requests311Card,
     youthCourt: youthCourtCard,
     schoolDiscipline: schoolDisciplineCard,
   };

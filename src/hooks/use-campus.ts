@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import useSWR from "swr";
 import type { CampusPayload, CampusRecord, CampusSchool } from "@/lib/types";
 import { useCampusStore } from "@/stores/campus-store";
+import { useApiUrl } from "@/hooks/use-api-url";
 import { SWR_CONFIG } from "@/lib/constants";
 
 const fetcher = async (url: string) => {
@@ -13,8 +14,9 @@ const fetcher = async (url: string) => {
 };
 
 export function useCampus() {
+  const url = useApiUrl("campus");
   const { data, error, isLoading } = useSWR<CampusPayload>(
-    "/api/campus",
+    url,
     fetcher,
     SWR_CONFIG,
   );
