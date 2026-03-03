@@ -75,8 +75,8 @@ async function runFromCSV(
         if (!date || date < DATA_FLOOR) return;
 
         const offenseType = row.offense?.trim() || "Unknown";
-        const crimeAgainst = row.crime_against?.trim() || "Unknown";
-        const category = row.category?.trim() || "Unknown";
+        const crimeAgainst = normalizeCrimeAgainst(row.crime_against ?? "");
+        const category = normalizeOffenseGroup(row.category ?? "");
         const district = normalizeDistrict(row.district);
         const zip = row.zip?.trim() || "";
         const nibrs = row.nibrs?.trim() || "";
