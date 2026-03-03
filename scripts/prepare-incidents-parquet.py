@@ -243,6 +243,7 @@ def main():
     etl_csv = OUTPUT_DIR / "_incidents-etl.csv"
     etl_cols = {
         "offense": pick_col(["Offense_Incident", "offincident", "Offense Incident"], cols),
+        "crime_against": pick_col(["NIBRS Crime Against", "nibrs_crimeagainst"], cols),
         "category": pick_col(["NIBRS Crime Category", "nibrs_crime_category"], cols),
         "district": pick_col(["Division", "district", "District"], cols),
         "zip": pick_col(["Zip Code", "zip_code"], cols),
