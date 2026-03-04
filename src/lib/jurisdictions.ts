@@ -102,6 +102,7 @@ const DOMAIN_SECTIONS: Record<DomainId, Section[]> = {
       href: "/cfs-311/overview",
       pages: [
         { id: "overview", label: "Overview", href: "/cfs-311/overview" },
+        { id: "time-of-day", label: "Time of Day", href: "/cfs-311/time-of-day" },
       ],
     },
   ],

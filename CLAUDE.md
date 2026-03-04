@@ -1,4 +1,4 @@
-# Dallas Youth Safety Dashboard
+# Youth Safety Dashboard
 
 ## Overview
 Public safety dashboard for Dallas County youth — Lone Star Justice Alliance (LSJA).
@@ -183,7 +183,7 @@ python scripts/prepare-cfs-csv.py             # Convert CFS Excel to CSVs
 
 ## Reference Files
 - `DATA_MODEL_DOCUMENTATION.md` — Complete PBI model documentation
-- `dallas-youth-safety-dashboard-spec.md` — Visual spec (original 13-page design; 4 pages not yet built)
+- `dallas-youth-safety-dashboard-spec.md` — Visual spec (original Dallas design; 4 pages not yet built)
 
 ## GitHub Actions CI
 - Workflow: `.github/workflows/refresh-data.yml`

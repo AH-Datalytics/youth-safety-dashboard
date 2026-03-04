@@ -14,6 +14,9 @@ import { TreeFilter, type TreeNode } from "@/components/filters/tree-filter";
 import { KPICard } from "@/components/ui/kpi-card";
 import { KPIBannerSkeleton, ChartSkeleton } from "@/components/ui/loading-skeleton";
 import { cn } from "@/lib/utils";
+import { PageToggle } from "@/components/ui/page-toggle";
+import { useJurisdiction } from "@/lib/jurisdiction-context";
+import { getSections } from "@/lib/jurisdictions";
 
 const CASE_STATUS_TABS = [
   "All",
@@ -37,6 +40,8 @@ export default function OffenseOverviewPage() {
   const { data: rawPayload } = useIncidents();
   const { filteredData, hourly, nibrsTree, metadata, isLoading } = useFilteredIncidents();
   const store = useOffenseStore();
+  const config = useJurisdiction();
+  const sectionPages = getSections(config).find((s) => s.id === "offense-arrest")?.pages ?? [];
 
   // Prepopulate date range: last 2 full years + YTD
   useEffect(() => {
@@ -113,7 +118,10 @@ export default function OffenseOverviewPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
-      <h1 className="font-serif text-lg md:text-xl font-bold mb-4">Offense Overview</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="font-serif text-lg md:text-xl font-bold">Offense Overview</h1>
+        <PageToggle pages={sectionPages} />
+      </div>
 
       <div className="flex gap-6">
         {/* Left sidebar — NIBRS tree filter */}

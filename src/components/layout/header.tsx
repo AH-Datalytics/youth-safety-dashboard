@@ -99,28 +99,6 @@ export function Header() {
         </button>
       </div>
 
-      {/* Page tabs for active section (desktop) */}
-      {activeSection && (
-        <div className="hidden md:block bg-[#111111] border-t border-white/10">
-          <div className="max-w-7xl mx-auto px-4 flex gap-1">
-            {activeSection.pages.map((page) => (
-              <Link
-                key={page.id}
-                href={page.href}
-                className={cn(
-                  "px-4 py-2 text-sm transition-colors border-b-2",
-                  pathname === page.href
-                    ? "border-white text-white"
-                    : "border-transparent text-white/60 hover:text-white hover:border-white/30",
-                )}
-              >
-                {page.label}
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Mobile menu */}
       {mobileOpen && (
         <nav className="md:hidden border-t border-white/10 pb-3 bg-black">
@@ -134,28 +112,42 @@ export function Header() {
           >
             Home
           </Link>
-          {sections.map((section) => (
-            <div key={section.id}>
-              <div className="px-4 pt-3 pb-1 text-xs font-bold text-white/40 uppercase tracking-wider">
+          {sections.map((section) =>
+            section.pages.length === 1 ? (
+              <Link
+                key={section.id}
+                href={section.href}
+                onClick={() => setMobileOpen(false)}
+                className={cn(
+                  "block px-4 py-2.5 text-sm",
+                  pathname === section.href ? "text-white bg-white/10" : "text-white/70",
+                )}
+              >
                 {section.label}
+              </Link>
+            ) : (
+              <div key={section.id}>
+                <div className="px-4 pt-3 pb-1 text-xs font-bold text-white/40 uppercase tracking-wider">
+                  {section.label}
+                </div>
+                {section.pages.map((page) => (
+                  <Link
+                    key={page.id}
+                    href={page.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={cn(
+                      "block px-6 py-2 text-sm",
+                      pathname === page.href
+                        ? "text-white bg-white/10"
+                        : "text-white/70 hover:text-white",
+                    )}
+                  >
+                    {page.label}
+                  </Link>
+                ))}
               </div>
-              {section.pages.map((page) => (
-                <Link
-                  key={page.id}
-                  href={page.href}
-                  onClick={() => setMobileOpen(false)}
-                  className={cn(
-                    "block px-6 py-2 text-sm",
-                    pathname === page.href
-                      ? "text-white bg-white/10"
-                      : "text-white/70 hover:text-white",
-                  )}
-                >
-                  {page.label}
-                </Link>
-              ))}
-            </div>
-          ))}
+            ),
+          )}
           <Link
             href={downloadsHref}
             onClick={() => setMobileOpen(false)}
