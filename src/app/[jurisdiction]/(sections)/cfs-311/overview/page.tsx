@@ -14,6 +14,9 @@ import { MultiSelect } from "@/components/filters/multi-select";
 import { TreeFilter, type TreeNode } from "@/components/filters/tree-filter";
 import { KPICard } from "@/components/ui/kpi-card";
 import { KPIBannerSkeleton, ChartSkeleton } from "@/components/ui/loading-skeleton";
+import { PageToggle } from "@/components/ui/page-toggle";
+import { useJurisdiction } from "@/lib/jurisdiction-context";
+import { getSections } from "@/lib/jurisdictions";
 
 /** Default date: Jan 1 of 2 years ago */
 function defaultDateFrom(): string {
@@ -27,6 +30,8 @@ export default function CFSOverviewPage() {
   const { data: rawPayload } = useCFS();
   const { filteredData, hourly, categoryTree, metadata, isLoading } = useFilteredCFS();
   const store = useCFSStore();
+  const config = useJurisdiction();
+  const sectionPages = getSections(config).find((s) => s.id === "cfs-311")?.pages ?? [];
 
   // Prepopulate date range
   useEffect(() => {
@@ -65,7 +70,10 @@ export default function CFSOverviewPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-4">
-      <h1 className="font-serif text-lg md:text-xl font-bold">Calls for Service Overview</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="font-serif text-lg md:text-xl font-bold">Calls for Service Overview</h1>
+        <PageToggle pages={sectionPages} />
+      </div>
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-lg border border-border">

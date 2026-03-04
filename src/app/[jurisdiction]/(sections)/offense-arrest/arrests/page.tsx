@@ -13,6 +13,9 @@ import { DateRangeSlicer } from "@/components/filters/date-range-slicer";
 import { MultiSelect } from "@/components/filters/multi-select";
 import { KPIBannerSkeleton, ChartSkeleton } from "@/components/ui/loading-skeleton";
 import { cn } from "@/lib/utils";
+import { PageToggle } from "@/components/ui/page-toggle";
+import { useJurisdiction } from "@/lib/jurisdiction-context";
+import { getSections } from "@/lib/jurisdictions";
 
 const DEMOGRAPHIC_TABS: { key: DemographicTab; label: string }[] = [
   { key: "youngAdult", label: "Young Adult vs Adult" },
@@ -27,6 +30,8 @@ export default function ArrestsPage() {
   const { data: rawPayload } = useArrests();
   const { filteredData, metadata, isLoading } = useFilteredArrests();
   const store = useArrestStore();
+  const config = useJurisdiction();
+  const sectionPages = getSections(config).find((s) => s.id === "offense-arrest")?.pages ?? [];
 
   // Prepopulate date range
   useEffect(() => {
@@ -89,7 +94,10 @@ export default function ArrestsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-6">
-      <h1 className="font-serif text-lg md:text-xl font-bold">Arrest Demographics</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="font-serif text-lg md:text-xl font-bold">Arrest Demographics</h1>
+        <PageToggle pages={sectionPages} />
+      </div>
 
       {/* Filter bar */}
       <div className="bg-white p-3 rounded-lg border border-border space-y-3">
