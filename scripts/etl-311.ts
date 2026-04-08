@@ -102,7 +102,7 @@ export async function run311ETL(config?: ETL311Config): Promise<Request311Payloa
 
   // Aggregate
   const aggMap = new Map<string, number>();
-  const pointMap = new Map<string, { lat: number; lon: number; rt: string; pg: string; c: number }>();
+  const pointMap = new Map<string, { lat: number; lon: number; rt: string; pg: string; d: string; c: number }>();
   const requestTypeSet = new Set<string>();
   const departmentSet = new Set<string>();
   const statusSet = new Set<string>();
@@ -144,12 +144,12 @@ export async function run311ETL(config?: ETL311Config): Promise<Request311Payloa
     const ll = parseLatLon(raw.lat_location);
     if (ll) {
       // Round to ~100m precision for aggregation
-      const ptKey = `${ll.lat.toFixed(4)},${ll.lon.toFixed(4)}|${requestType}|${pg}`;
+      const ptKey = `${ll.lat.toFixed(4)},${ll.lon.toFixed(4)}|${requestType}|${pg}|${date}`;
       const existing = pointMap.get(ptKey);
       if (existing) {
         existing.c++;
       } else {
-        pointMap.set(ptKey, { lat: ll.lat, lon: ll.lon, rt: requestType, pg, c: 1 });
+        pointMap.set(ptKey, { lat: ll.lat, lon: ll.lon, rt: requestType, pg, d: date, c: 1 });
       }
     }
   }

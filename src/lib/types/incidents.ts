@@ -30,7 +30,7 @@ export interface IncidentHourly {
   c: number;
 }
 
-/** Location point for dot map (aggregated by unique lat/lon per month) */
+/** Location point for dot map (aggregated by unique lat/lon per date) */
 export interface IncidentPoint {
   /** latitude */
   lat: number;
@@ -40,8 +40,8 @@ export interface IncidentPoint {
   cs: string;
   /** NIBRS category */
   ca: string;
-  /** month YYYY-MM */
-  m: string;
+  /** date YYYY-MM-DD */
+  d: string;
   /** count at this location */
   c: number;
 }

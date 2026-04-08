@@ -28,6 +28,8 @@ export interface Request311Point {
   rt: string;
   /** priority group */
   pg: string;
+  /** date YYYY-MM-DD */
+  d: string;
   /** count at this location */
   c: number;
 }
