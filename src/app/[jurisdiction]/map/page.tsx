@@ -81,19 +81,15 @@ export default function UnifiedMapPage() {
       }));
   }, [nibrsTree]);
 
-  // Derive month range from date filters for point filtering
-  const dateFromMonth = dateFrom ? dateFrom.substring(0, 7) : null;
-  const dateToMonth = dateTo ? dateTo.substring(0, 7) : null;
-
   // Build combined map points
   const mapPoints: DotMapPoint[] = useMemo(() => {
     const pts: DotMapPoint[] = [];
 
-    // Offense points (filtered by date month + case status)
+    // Offense points (filtered by date range + case status)
     if (showOffenses && incidentPoints) {
       for (const p of incidentPoints) {
-        if (dateFromMonth && p.m < dateFromMonth) continue;
-        if (dateToMonth && p.m > dateToMonth) continue;
+        if (dateFrom && p.d < dateFrom) continue;
+        if (dateTo && p.d > dateTo) continue;
         if (caseStatusFilter !== "All" && p.cs !== caseStatusFilter) continue;
         pts.push({
           lat: p.lat,
@@ -105,9 +101,11 @@ export default function UnifiedMapPage() {
       }
     }
 
-    // 311 points
+    // 311 points (filtered by date range)
     if (show311 && r311Points) {
       for (const p of r311Points) {
+        if (dateFrom && p.d < dateFrom) continue;
+        if (dateTo && p.d > dateTo) continue;
         pts.push({
           lat: p.lat,
           lon: p.lon,
@@ -119,7 +117,7 @@ export default function UnifiedMapPage() {
     }
 
     return pts;
-  }, [showOffenses, show311, incidentPoints, r311Points, caseStatusFilter, dateFromMonth, dateToMonth]);
+  }, [showOffenses, show311, incidentPoints, r311Points, caseStatusFilter, dateFrom, dateTo]);
 
   const isLoading = incLoading || r311Loading;
 

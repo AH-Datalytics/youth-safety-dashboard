@@ -45,7 +45,7 @@ async function runFromCSV(
 
   const aggMap = new Map<string, number>();
   const hourlyMap = new Map<string, number>();
-  const pointMap = new Map<string, { lat: number; lon: number; cs: string; ca: string; m: string; c: number }>();
+  const pointMap = new Map<string, { lat: number; lon: number; cs: string; ca: string; d: string; c: number }>();
   const offenseTypeSet = new Set<string>();
   const crimeAgainstSet = new Set<string>();
   const categorySet = new Set<string>();
@@ -117,11 +117,10 @@ async function runFromCSV(
           const lat = parseFloat(row.lat ?? "");
           const lon = parseFloat(row.lon ?? "");
           if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0) {
-            const month = date.substring(0, 7);
-            const ptKey = `${lat.toFixed(4)},${lon.toFixed(4)}|${cs}|${category}|${month}`;
+            const ptKey = `${lat.toFixed(4)},${lon.toFixed(4)}|${cs}|${category}|${date}`;
             const existing = pointMap.get(ptKey);
             if (existing) existing.c++;
-            else pointMap.set(ptKey, { lat, lon, cs, ca: category, m: month, c: 1 });
+            else pointMap.set(ptKey, { lat, lon, cs, ca: category, d: date, c: 1 });
           }
         }
 
@@ -144,7 +143,7 @@ async function runFromSocrataJSON(socrataJsonUrl: string = DEFAULT_SOCRATA_URL):
 
   const aggMap = new Map<string, number>();
   const hourlyMap = new Map<string, number>();
-  const pointMap = new Map<string, { lat: number; lon: number; cs: string; ca: string; m: string; c: number }>();
+  const pointMap = new Map<string, { lat: number; lon: number; cs: string; ca: string; d: string; c: number }>();
   const offenseTypeSet = new Set<string>();
   const crimeAgainstSet = new Set<string>();
   const categorySet = new Set<string>();
@@ -230,11 +229,10 @@ async function runFromSocrataJSON(socrataJsonUrl: string = DEFAULT_SOCRATA_URL):
           lon = parseFloat(String(geo.longitude));
         }
         if (lat && lon && !isNaN(lat) && !isNaN(lon)) {
-          const month = date.substring(0, 7);
-          const ptKey = `${lat.toFixed(4)},${lon.toFixed(4)}|${cs}|${category}|${month}`;
+          const ptKey = `${lat.toFixed(4)},${lon.toFixed(4)}|${cs}|${category}|${date}`;
           const existing = pointMap.get(ptKey);
           if (existing) existing.c++;
-          else pointMap.set(ptKey, { lat, lon, cs, ca: category, m: month, c: 1 });
+          else pointMap.set(ptKey, { lat, lon, cs, ca: category, d: date, c: 1 });
         }
       }
     }
@@ -268,7 +266,7 @@ function buildTreeFromData(
 function buildPayload(
   aggMap: Map<string, number>,
   hourlyMap: Map<string, number>,
-  pointMap: Map<string, { lat: number; lon: number; cs: string; ca: string; m: string; c: number }>,
+  pointMap: Map<string, { lat: number; lon: number; cs: string; ca: string; d: string; c: number }>,
   nibrsTree: NIBRSTreeNode[],
   offenseTypeSet: Set<string>,
   crimeAgainstSet: Set<string>,
