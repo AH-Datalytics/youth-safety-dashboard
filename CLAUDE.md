@@ -47,6 +47,8 @@ Migrated from Power BI Desktop to Next.js web app deployed on Vercel with automa
 
 Source files are NOT in git — downloaded from OneDrive at CI time or manually placed locally.
 
+The overview summary includes a `lastUpdated` ISO timestamp set at ETL compute time, displayed on the home page.
+
 ### API Routes
 | Route | Purpose |
 |-------|---------|
