@@ -20,6 +20,7 @@ interface CardSummary {
 }
 
 interface OverviewData {
+  lastUpdated?: string;
   banner: {
     offenses: BannerKPI;
     arrests: BannerKPI;
@@ -64,6 +65,11 @@ export default function JurisdictionHomePage() {
         </h1>
         <p className="text-sm text-[#666] mt-1">
           Built for {config.org} by AH Datalytics
+          {data?.lastUpdated && (
+            <span className="ml-3 text-xs text-[#999]">
+              Data updated {new Date(data.lastUpdated).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+            </span>
+          )}
         </p>
       </div>
 

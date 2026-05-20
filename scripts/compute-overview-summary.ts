@@ -25,6 +25,7 @@ interface BannerKPI {
 }
 
 interface OverviewSummary {
+  lastUpdated: string;
   banner: {
     offenses: BannerKPI;
     arrests: BannerKPI;
@@ -279,6 +280,7 @@ export function computeOverviewSummary(dir?: string): OverviewSummary {
   }
 
   return {
+    lastUpdated: new Date().toISOString(),
     banner: {
       offenses: offensesBanner,
       arrests: arrestsBanner,
