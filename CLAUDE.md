@@ -189,3 +189,147 @@ python scripts/prepare-cfs-csv.py             # Convert CFS Excel to CSVs
 - Workflow: `.github/workflows/refresh-data.yml`
 - Trigger: `workflow_dispatch` (manual) + `schedule` (daily)
 - Steps: checkout → npm ci → download OneDrive files → Python parquet → Python CFS CSV → npm run refresh-data → commit generated data
+
+---
+
+## Statewide Expansion — Texas Youth Justice Data Platform (April 2026)
+
+### Status (as of 2026-04-13)
+- **Proposal v2 drafted and sent for review.** Elizabeth confirmed she wants phased approach aligned to JOY Hubs prospectus with benchmarks to unlock funding at each phase.
+- **v2 proposal**: `docs/proposals/2026-04-13-statewide-platform-proposal-v2.md` (markdown) and `docs/proposals/AH Datalytics - LSJA Statewide Youth Justice Data Platform.docx` (formatted .docx)
+- **Previous drafts**: `docs/proposals/2026-04-08-statewide-platform-proposal.md` (full detail) and `2026-04-08-statewide-platform-financial-summary.md` (1-page)
+- **Pricing**: $1M total over 5 years ($250K→$225K→$200K→$175K→$150K declining profile). Enhanced scope options noted for future discussion.
+- **Tarrant County on hold** until after Elizabeth's pitch — if statewide funding comes through, Tarrant is subsumed into the statewide platform.
+- **Dallas dashboard**: still needs to be deployed live on LSJA's website. Immediate action item.
+
+### Context: What Is This?
+LSJA is pitching a **$65 million "JOY Hubs" fund** to One for Justice — a pooled fund of major funders (Mellon, Vera, Blue Meridian, Aspen, Helsing Simmons, etc.) who collectively give over $1B/year to justice reform. The pitch is ~2 weeks from 2026-04-08. Elizabeth wants AHD's statewide dashboard bid included in the financial model.
+
+JOY Hubs are a statewide network of community reengagement centers for justice-involved youth ages 16–24. $31.7M over 5 years for direct services, ~4,650 participants, phased: Year 1 infrastructure, Years 2–4 six urban hubs, Year 5 rural expansion.
+
+**The dashboard is the measurement and accountability backbone** — the system that makes JOY Hub outcomes visible to funders, legislators, and the public.
+
+### Key People
+- **Elizabeth** — LSJA executive, the client. Fast-moving, vision-driven. "Grade them against each other."
+- **Courtney Chavez** — LSJA, new point of contact for Tarrant County and ongoing work
+- **Stephanie Trevino** — LSJA finance, helming the financial model for the $65M pitch
+- **Haley Shaeffer** — AHD team member on the project
+
+### Client Meeting Summary (2026-04-08)
+Key decisions from the meeting:
+1. **Invoicing**: 5 annual invoices of $4,500 for Dallas maintenance (NLC grant, $500 kept by LSJA admin). Pick first-quarter dates.
+2. **Tarrant County**: Green light, $10K under Rainwater grant. Courtney is point of contact. **BUT hold until after the pitch** — may skip straight to statewide.
+3. **Statewide proposal needed**: Elizabeth wants a bid to include in the $65M pitch. "Send me an analysis of how much you think it would cost."
+4. **Collin County next, then Denton** after Tarrant.
+5. **Dashboard was cited by Evident Change** in their March 2026 Dallas evaluation. Elizabeth: "they're using the dashboard to calculate some of the data."
+6. **Legislative testimony**: Elizabeth may want AHD to testify at Texas Capitol next session for crime data myth-busting.
+
+### What Elizabeth Wants the Platform to Do
+1. **Statewide dashboard** covering all 254 Texas counties
+2. **Drill down** to any county (and potentially deeper)
+3. **A–F letter grades** for each county — "the best way to get reform is to make them feel like they're part of the cool kids"
+4. **Aligned to the YSC Strategic Plan** — specifically the Youth Justice Cornerstone (pp. 39–51) with its outcomes, impacts, and measurement callout boxes
+5. **Visual representation of measured outcomes** for each county per the strategic plan
+6. **Additional data**: TWC workforce data (Ray Marshall Center partnership), health data (long-term)
+7. **JOY Hub outcome tracking** — dashboard shows whether Hubs are achieving their metrics
+
+### Pricing Discussion
+- **v2 approach**: Single $1M/5yr option with declining annual profile ($250K→$150K). Enhanced scope noted as future option.
+- **Elizabeth's direction (2026-04-13)**: Follow prospectus phased approach. Share benchmarks to unlock funding at each phase.
+- **Context**: Within $65M fund, this is 1.5%. The JOY Hubs evaluation partner alone is $1M. Phase 1 backbone is $1.35M.
+- **Price sensitivity**: Keep front-end manageable (~$200-250K/yr). Options to scale toward $1.5M if enhanced scope needed.
+
+### YSC Strategic Plan — Youth Justice Cornerstone (pp. 39–51)
+Four goals with specific metrics the dashboard must track:
+
+**Goal 1: Reform Intake**
+- Quantitative: # youth diverted, reduction in # incarcerated, reduction in days in detention, recidivism rates, youth completing community programs
+- Qualitative: feedback from youth/families, case studies
+
+**Goal 2: Maximize Diversion**
+- Quantitative: # youth diverted to community programs, # diversion programs with restorative justice, recidivism reduction, # CBO partnerships
+- Qualitative: youth/family feedback, success stories, partnership sustainability
+
+**Goal 3: Reduce Detention 50%**
+- Quantitative: # law enforcement trained, # youth diverted from detention, recidivism rates, time-saved (Participatory Defense metric), # community programs developed
+- Qualitative: success stories, stakeholder feedback on alternatives
+
+**Goal 4: Shift Public Narrative**
+- Quantitative: # media campaigns, public engagement metrics, # youth/advocates trained, # partnerships
+- Qualitative: perception change feedback, case studies, public discourse analysis
+
+### JOY Hubs Outcome Metrics (from prospectus)
+- Youth connected to Hub within 24–72 hours post-release
+- Warm handoff rate on release day (target: 80%+)
+- Re-arrest rate at 12 and 36 months (Dallas benchmark: 10.7% at 3 years; WilCo RCT graduates: 14%)
+- Credential attainment rate (benchmark: 127 lifetime credentials)
+- Employment rate and average wage at 6/12 months ($18.36/hr, 68% 180-day retention)
+- Housing connection at 90 days
+- Youth reenrolled in school or training
+- Participant Net Promoter Score (92.5% lifetime)
+- Family engagement for youth under 18
+- Youth advisory council participation
+
+### Dallas Proof of Concept — Evident Change Results (March 2026)
+- 59% reduction in detention-to-disposition time (140 → 57 days)
+- 24% reduction in monthly detention census (103 → 78)
+- 41% drop in misdemeanor filings (61/mo → 36/mo)
+- 61% increase in supervisory caution (18% → 29%)
+- 26% decrease in formal probation (57% → 42%)
+- Low-risk youth in detention "nearly disappeared" (3–10/mo → 0–1)
+- High-risk youth proportion increased (54% → 61%) — appropriate targeting
+
+### Statewide Data Sources Identified
+| Source | Data | All 254 Counties? | Effort |
+|--------|------|--------------------|--------|
+| **TJJD** | Referrals, dispositions, detention, probation, demographics, recidivism | Yes | Medium — need data agreement for detail beyond public reports |
+| **TEA** | School discipline, referrals to justice, enrollment, demographics | Yes (by district) | Low — already built for Dallas |
+| **Texas DPS / NIBRS** | Offense and arrest data by agency | All reporting agencies | Medium — public data (Crime in Texas + FBI Crime Data Explorer) |
+| **Census / ACS** | Demographics, poverty, housing, education, employment | Yes | Low — free API |
+| **TWC** | County employment, unemployment, industry | Yes (general) | Low — public |
+| **Ray Marshall Center** | Individual wage data for JOY Hub participants | Hub counties only | High — partnership required |
+| **OCA** | Case disposition times, filing types | Most counties | Medium — public + possible agreement |
+| **DSHS / HHSC** | Mental health, health indicators | TBD | Very High — multi-year effort |
+| **JOY Hub case management** | Participant outcomes | Hub counties only | Medium-High — depends on their system |
+
+**Key insight**: TJJD + TEA + Census + TWC + DPS NIBRS gives a meaningful baseline for ALL 254 counties with no special agreements. Enough to grade every county on justice + education + economic context. Deeper data layers on for JOY Hub counties over time.
+
+**Key dependency**: TJJD data sharing agreement for detailed county-level data is the biggest Year 1 blocker. LSJA has the relationship with TJJD to make this happen.
+
+### A–F Grading System Design
+- **Components**: Diversion rate, detention rate per capita, time to disposition, re-referral rate, school-to-justice referral rate, economic context
+- **Normalization**: Peer groups or per-capita rates (Dallas ≠ Loving County)
+- **Benchmarks**: National Model Time Standards, TJJD state averages, YSC Cornerstone targets
+- **Transparency**: Formula, weights, and data published on platform
+- **Improvement-sensitive**: Grades reflect both absolute performance and YoY improvement
+- **Methodology effort**: ~100–150 hours of consulting/data science work
+
+### Architecture Changes Needed for Statewide
+- **Data pipeline**: Per-jurisdiction individual files → centralized bulk ingest (TJJD bulk, TEA bulk, Census API, DPS NIBRS, TWC)
+- **New page types**: Statewide map with grade overlay, county comparison tool, grading leaderboard, JOY Hub dashboards
+- **Two-tier views**: Statewide overview → County detail (like current Dallas)
+- **i18n**: next-intl for full English/Spanish bilingual support
+- **Grading engine**: Computes and displays A–F per county
+- **Automated reports**: "State of the county" summaries for legislators
+
+### Design Ideas Discussed (pre-client-meeting brainstorming)
+- **Dual entry paths**: "Explore Dallas" (city-wide KPIs) vs. "My Neighborhood" (ZIP-filtered). Same pages, just a geography filter in a shared Zustand store. Toggle in header: "All of Dallas ↔ ZIP 75217". This was discussed but is separate from the statewide proposal.
+- **Census/ACS as foundation layer**: Free, available everywhere, contextualizes justice data with conditions (poverty, housing, employment).
+
+### Reference Documents (all reviewed)
+- **YSC Strategic Plan**: `https://www.lonestarjusticealliance.org/wp-content/uploads/2024/12/final_BW_LSJA_Dallas-Youth-Safety-Collaborative.pdf` — pp. 39–51 for Youth Justice Cornerstone
+- **JOY Hubs Executive Summary**: `C:\Users\bhorw\Downloads\2026 Joy Hubs Executive Summary Final.docx`
+- **JOY Hubs Full Prospectus**: `C:\Users\bhorw\Downloads\2026_Joy_Hubs_Prospectus_FINAL.docx`
+- **Dallas Phase 2 Proposal**: `C:\OneDrive\OneDrive - ahdatalytics.com\Proposals\AH Datalytics - LSJA Phase 2.docx`
+- **Tarrant County Proposal**: `C:\OneDrive\OneDrive - ahdatalytics.com\Proposals\AH Datalytics - Tarrant County - Youth Safety Dashboard.docx` (copy to temp to read — OneDrive virtual FS issue with python-docx)
+- **Evident Change Dallas Report**: `https://evidentchange.org/wp-content/uploads/2026/03/Dallas_County_Interim_Report.pdf`
+- **Lab Report Dallas Article**: `C:\Users\bhorw\Downloads\Dallas' Juvenile Justice System Was Broken. Have County Leaders Fixed It_.pdf`
+- **Meeting Notes**: `C:\Users\bhorw\Downloads\Notes from 4-8-26 meeting LSJA.docx`
+- **Meeting Transcript**: `C:\Users\bhorw\Downloads\AHD and LSJA Transcript.txt`
+
+### Immediate Next Steps
+1. Ben sends email to Elizabeth confirming format (1–2 pager vs. full proposal) and floating $1–1.5M range
+2. Wait for Elizabeth's response
+3. Based on her response, either deliver the 1-page financial summary or refine the full proposal
+4. Deploy Dallas dashboard live on LSJA website (separate task, can happen now)
+5. Follow up with Courtney to schedule intro meeting and show the platform
