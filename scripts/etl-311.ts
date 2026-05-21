@@ -127,8 +127,8 @@ export async function run311ETL(config?: ETL311Config): Promise<Request311Payloa
   let maxDate = "";
 
   // Only store points from last 12 months for dot map
-  const now = new Date();
-  const pointsCutoff = `${now.getFullYear() - 1}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const ptNow = new Date();
+  const pointsCutoff = `${ptNow.getFullYear() - 1}-${String(ptNow.getMonth() + 1).padStart(2, "0")}-01`;
 
   for (const raw of allRecords) {
     if (!raw.created_date) continue;
