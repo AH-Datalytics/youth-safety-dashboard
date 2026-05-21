@@ -91,6 +91,7 @@ const DOMAIN_SECTIONS: Record<DomainId, Section[]> = {
       href: "/offense-arrest/overview",
       pages: [
         { id: "overview", label: "Overview", href: "/offense-arrest/overview" },
+        { id: "ytd", label: "Year-to-Date", href: "/offense-arrest/ytd" },
         { id: "arrests", label: "Demographics", href: "/offense-arrest/arrests" },
       ],
     },
@@ -140,7 +141,8 @@ const DOMAIN_SECTIONS: Record<DomainId, Section[]> = {
       label: "School Discipline",
       href: "/school-discipline/incidents",
       pages: [
-        { id: "incidents", label: "Overview", href: "/school-discipline/incidents" },
+        { id: "incidents", label: "Summary", href: "/school-discipline/incidents" },
+        { id: "charts", label: "Incidents & Discipline", href: "/school-discipline/charts" },
       ],
     },
   ],
@@ -177,7 +179,7 @@ export const JURISDICTIONS: JurisdictionConfig[] = [
       baseUrl: "https://www.dallasopendata.com/resource",
       incidents: "qv6i-rri7",
       arrests: "sdr7-6v3j",
-      requests311: "gc4d-8a49",
+      requests311: "d7e7-envw",
     },
     onedrive: {
       basePath: "/Clients/NLC/Dallas/PowerBI",

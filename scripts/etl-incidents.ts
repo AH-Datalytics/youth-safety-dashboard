@@ -221,9 +221,9 @@ async function runFromSocrataJSON(socrataJsonUrl: string = DEFAULT_SOCRATA_URL):
         const geo = raw.geocoded_column as Record<string, unknown>;
         let lat: number | undefined, lon: number | undefined;
         if (geo.coordinates && Array.isArray(geo.coordinates)) {
-          // Socrata geocoded_column uses [lat, lon] order (not GeoJSON [lon, lat])
-          lat = geo.coordinates[0] as number;
-          lon = geo.coordinates[1] as number;
+          // GeoJSON coordinates are [lon, lat]
+          lon = geo.coordinates[0] as number;
+          lat = geo.coordinates[1] as number;
         } else if (geo.latitude && geo.longitude) {
           lat = parseFloat(String(geo.latitude));
           lon = parseFloat(String(geo.longitude));
