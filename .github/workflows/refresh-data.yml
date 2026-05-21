@@ -36,15 +36,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: scripts/requirements.txt
 
       - name: Install Python dependencies
         run: pip install -r scripts/requirements.txt
 
-      - name: Download & prepare incidents Parquet + ETL CSV
-        run: python scripts/prepare-incidents-parquet.py
-
-      - name: Convert CFS Excel to CSVs
-        run: python scripts/prepare-cfs-csv.py
+      - name: Prepare data files (parallel)
+        run: |
+          python scripts/prepare-incidents-parquet.py &
+          python scripts/prepare-cfs-csv.py &
+          wait
 
       - name: Run ETL pipelines
         run: npm run refresh-data
