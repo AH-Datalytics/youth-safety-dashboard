@@ -86,23 +86,25 @@ To run locally, you need the source data files. Either:
 ### Socrata Column Names (verified)
 - **Incidents** (`qv6i-rri7`): `date1`, `offincident`, `nibrs_crime_category`, `nibrs_crime`, `district`, `zip_code`
 - **Arrests** (`sdr7-6v3j`): `ararrestdate`, `araction`, `race`, `sex`, `age`, `arldistrict`, `arlzip`
-- **311** (`gc4d-8a49`): `created_date`, `service_request_type`, `department`, `status`, `city_council_district`, `address` (zip extracted via regex)
+- **311** (`d7e7-envw`): `created_date`, `service_request_type`, `department`, `status`, `city_council_district`, `address` (zip extracted via regex), `lat_location`, `priority`
 
-## Pages (10 actual routes)
+## Pages (14 actual routes)
 | # | Page | Route | Description |
 |---|------|-------|-------------|
 | 1 | Landing | `/` | Multi-jurisdiction selector (redirects to `/dallas`) |
 | 2 | Home | `/[jurisdiction]` | KPI banner + 4 domain cards with sparklines |
-| 3 | Offense Overview | `/[jurisdiction]/offense-arrest/overview` | KPIs + monthly trend + NIBRS tree + heat map |
-| 4 | Arrest Demographics | `/[jurisdiction]/offense-arrest/arrests` | Charge bars + demographic multi-line chart |
-| 5 | CFS Overview | `/[jurisdiction]/cfs-311/overview` | KPIs + monthly trend + call type bars + heat map |
-| 6 | CFS Time of Day | `/[jurisdiction]/cfs-311/time-of-day` | Heat matrix + DOW breakdown |
-| 7 | 311 Requests | `/[jurisdiction]/cfs-311/requests` | Type/priority bars + monthly trend |
-| 8 | Youth Court Referrals | `/[jurisdiction]/youth-court/referrals` | Brush bar chart + category tabs + ZIP choropleth |
-| 9 | School Discipline | `/[jurisdiction]/school-discipline/incidents` | CompStat table + incident/action bars + school dot map |
-| 10 | Map | `/[jurisdiction]/map` | Dot map combining offenses + 311 requests |
-| 11 | Downloads | `/[jurisdiction]/downloads` | Card layout with CSV/Excel download for all 6 datasets |
-| 12 | About | `/[jurisdiction]/about` | Project information + data sources |
+| 3 | Offense Overview | `/[jurisdiction]/offense-arrest/overview` | KPIs + monthly chart + heat map + NIBRS tree + case status tabs |
+| 4 | Offense Year-to-Date | `/[jurisdiction]/offense-arrest/ytd` | Case status tabs + NIBRS filter + CompStat YTD table |
+| 5 | Arrest Demographics | `/[jurisdiction]/offense-arrest/arrests` | Charge bars + demographic multi-line chart |
+| 6 | CFS Overview | `/[jurisdiction]/cfs-311/overview` | 3 KPIs + monthly trend + call type bars + heat map |
+| 7 | CFS Time of Day | `/[jurisdiction]/cfs-311/time-of-day` | Heat matrix + DOW breakdown |
+| 8 | 311 Requests | `/[jurisdiction]/cfs-311/requests` | Type/priority bars + monthly trend |
+| 9 | Youth Court Referrals | `/[jurisdiction]/youth-court/referrals` | Brush bar chart + category tabs + ZIP choropleth |
+| 10 | School Discipline Summary | `/[jurisdiction]/school-discipline/incidents` | Incident Reasons / Discipline Actions tabs + CompStat table |
+| 11 | School Incidents & Discipline | `/[jurisdiction]/school-discipline/charts` | Tabbed bar chart (reasons/actions) + school dot map |
+| 12 | Map | `/[jurisdiction]/map` | Dot map combining offenses + 311 requests |
+| 13 | Downloads | `/[jurisdiction]/downloads` | Card layout with CSV/Excel download for all 6 datasets |
+| 14 | About | `/[jurisdiction]/about` | Project information + data sources |
 
 ## Per-Domain File Pattern
 ```
@@ -329,9 +331,28 @@ Four goals with specific metrics the dashboard must track:
 - **Meeting Notes**: `C:\Users\bhorw\Downloads\Notes from 4-8-26 meeting LSJA.docx`
 - **Meeting Transcript**: `C:\Users\bhorw\Downloads\AHD and LSJA Transcript.txt`
 
+### Iframe Embedding (for LSJA website)
+Target iframe height: **1,400px** (tallest page is Youth Court with category expanded).
+
+```html
+<iframe
+  src="https://youth-safety-dashboard.vercel.app/dallas"
+  width="100%"
+  height="1400"
+  style="border: none; max-width: 1280px;"
+  loading="lazy"
+  title="Dallas Youth Safety Dashboard"
+></iframe>
+```
+
+Pages were restructured in May 2026 to fit within ~1,400px:
+- Offense & Arrest split into 3 tabs (Overview, Year-to-Date, Demographics) via PageToggle
+- School Discipline split into 2 tabs (Summary, Incidents & Discipline) via PageToggle
+- CFS Overview reduced from 4 KPIs to 3 (removed YTD Current)
+
 ### Immediate Next Steps
 1. Ben sends email to Elizabeth confirming format (1–2 pager vs. full proposal) and floating $1–1.5M range
 2. Wait for Elizabeth's response
 3. Based on her response, either deliver the 1-page financial summary or refine the full proposal
-4. Deploy Dallas dashboard live on LSJA website (separate task, can happen now)
+4. ~~Deploy Dallas dashboard live on LSJA website~~ — iframe code ready, share with LSJA
 5. Follow up with Courtney to schedule intro meeting and show the platform
