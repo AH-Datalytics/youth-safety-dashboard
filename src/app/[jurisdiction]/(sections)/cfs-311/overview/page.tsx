@@ -5,7 +5,7 @@ import { useCFS, useFilteredCFS } from "@/hooks/use-cfs";
 import { useCFSStore } from "@/stores/cfs-store";
 import { DownloadButton } from "@/components/ui/download-button";
 import { DOWNLOAD_DOMAINS } from "@/config/download-columns";
-import { computeMonthly, computeYTD, groupByKey } from "@/lib/measures";
+import { computeMonthly, groupByKey } from "@/lib/measures";
 import { MonthlyBarChart } from "@/components/charts/monthly-bar-chart";
 import { BarChartHorizontal } from "@/components/charts/bar-chart-horizontal";
 import { TimeMatrix } from "@/components/charts/time-matrix";
@@ -44,7 +44,6 @@ export default function CFSOverviewPage() {
   const monthly = useMemo(() => computeMonthly(filteredData), [filteredData]);
   const byCategory = useMemo(() => groupByKey(filteredData, (r) => r.cat || r.ct), [filteredData]);
   const total = useMemo(() => filteredData.reduce((s, r) => s + r.c, 0), [filteredData]);
-  const ytd = useMemo(() => computeYTD(filteredData), [filteredData]);
 
   // Build call type tree from categoryTree
   const treeNodes: TreeNode[] = useMemo(() => {
@@ -123,7 +122,7 @@ export default function CFSOverviewPage() {
       </div>
 
       {/* KPI Banner */}
-      <div className="bg-primary rounded-lg grid grid-cols-2 md:grid-cols-4 divide-x divide-white/10">
+      <div className="bg-primary rounded-lg grid grid-cols-2 md:grid-cols-3 divide-x divide-white/10">
         <KPICard label="Total Calls" value={total} />
         <KPICard
           label="Avg Response Time (Min)"
@@ -134,12 +133,6 @@ export default function CFSOverviewPage() {
           label="Avg Time Spent (Min)"
           value={metadata?.summary?.avgTimeSpent ?? 0}
           decimals={1}
-        />
-        <KPICard
-          label="YTD Current"
-          value={ytd.currentYTD}
-          priorValue={ytd.priorYTD}
-          pctChange={ytd.pctChange}
         />
       </div>
       {metadata?.dataThrough && (

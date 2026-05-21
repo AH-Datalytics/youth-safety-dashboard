@@ -11,6 +11,8 @@ interface CompStatDisciplineTableProps {
   /** When set, this SY is the rightmost column and 2 prior SYs fill in */
   selectedYear?: string | null;
   title?: string;
+  /** Optional: show only specific section(s) by code */
+  visibleSections?: string[];
 }
 
 function PctCell({ value }: { value: number | null }) {
@@ -48,6 +50,7 @@ export function CompStatDisciplineTable({
   schoolYears,
   selectedYear,
   title,
+  visibleSections,
 }: CompStatDisciplineTableProps) {
   const { sections, syColumns, grandTotals, grandPct } = useMemo(() => {
     const sorted = [...schoolYears].sort();
@@ -71,10 +74,13 @@ export function CompStatDisciplineTable({
     const incidentRecords = records.filter((r) => r.tp === "Incident Type");
 
     // Group definitions
-    const groupDefs = [
+    const allGroupDefs = [
       { label: "Incident Reasons", sectionCode: "W-REASON INCIDENT COUNTS" },
       { label: "Discipline Actions", sectionCode: "X-DISCIPLINE ACTION COUNTS" },
     ];
+    const groupDefs = visibleSections
+      ? allGroupDefs.filter((g) => visibleSections.includes(g.sectionCode))
+      : allGroupDefs;
 
     const sections: Section[] = groupDefs.map(({ label, sectionCode }) => {
       // Get records for this section
@@ -123,7 +129,7 @@ export function CompStatDisciplineTable({
     const grandPct = gPrev === 0 ? null : (gCurr - gPrev) / gPrev;
 
     return { sections, syColumns, grandTotals, grandPct };
-  }, [records, schoolYears, selectedYear]);
+  }, [records, schoolYears, selectedYear, visibleSections]);
 
   if (syColumns.length === 0) return null;
 

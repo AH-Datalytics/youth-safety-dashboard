@@ -5,9 +5,8 @@ import { useIncidents, useFilteredIncidents } from "@/hooks/use-incidents";
 import { useOffenseStore } from "@/stores/offense-store";
 import { DownloadButton } from "@/components/ui/download-button";
 import { DOWNLOAD_DOMAINS } from "@/config/download-columns";
-import { computeMonthly, computeYTD, computeYTDByType } from "@/lib/measures";
+import { computeMonthly, computeYTD } from "@/lib/measures";
 import { MonthlyBarChart } from "@/components/charts/monthly-bar-chart";
-import { YtdChangeTable } from "@/components/charts/ytd-change-table";
 import { TimeMatrix } from "@/components/charts/time-matrix";
 import { DateRangeSlicer } from "@/components/filters/date-range-slicer";
 import { TreeFilter, type TreeNode } from "@/components/filters/tree-filter";
@@ -96,12 +95,6 @@ export default function OffenseOverviewPage() {
 
   // Monthly bar chart
   const monthly = useMemo(() => computeMonthly(tabFiltered), [tabFiltered]);
-
-  // CompStat table — YTD by offense group, grouped by crimeAgainst hierarchy
-  const ytdByType = useMemo(
-    () => computeYTDByType(tabFiltered, (r) => r.ca, undefined, (r) => r.cag),
-    [tabFiltered],
-  );
 
   if (isLoading) {
     return (
@@ -225,9 +218,6 @@ export default function OffenseOverviewPage() {
 
           {/* Monthly bar chart */}
           <MonthlyBarChart data={monthly} title="# of Offenses by Year and Month" />
-
-          {/* CompStat table */}
-          <YtdChangeTable data={ytdByType} title="Year-to-Date Change by Offense Group" />
 
           {/* Heat map */}
           <TimeMatrix data={hourly} title="Hour x Day of Week Heat Map" />

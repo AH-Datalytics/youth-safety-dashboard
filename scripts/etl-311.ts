@@ -1,18 +1,17 @@
 /**
  * ETL: Dallas 311 Service Requests (Socrata)
- * Source: https://www.dallasopendata.com/resource/gc4d-8a49
+ * Source: https://www.dallasopendata.com/resource/d7e7-envw
  * Output: data/generated/311-data.json(.gz)
  *
- * Per PBI: filtered to department = "Code Compliance" only.
- * Fetches lat_location for dot map, priority for priority groups.
+ * Fetches all departments. lat_location for dot map, priority for priority groups.
  * Uses unique_key for DISTINCTCOUNT matching PBI.
  */
 import type { Request311Payload, Request311Record, Request311Point } from "../src/lib/types/requests311";
 import { priorityGroup311 } from "./utils/normalize";
 
-const DEFAULT_ENDPOINT = "https://www.dallasopendata.com/resource/gc4d-8a49.json";
-const PAGE_SIZE = 50_000;
-const MAX_RECORDS = 2_000_000;
+const DEFAULT_ENDPOINT = "https://www.dallasopendata.com/resource/d7e7-envw.json";
+const PAGE_SIZE = 10_000;
+const MAX_RECORDS = 5_000_000;
 const DATA_FLOOR = "2020-01-01T00:00:00";
 
 export interface ETL311Config {
@@ -77,28 +76,43 @@ export async function run311ETL(config?: ETL311Config): Promise<Request311Payloa
   const endpoint = config?.baseUrl && config?.datasetId
     ? `${config.baseUrl}/${config.datasetId}.json`
     : DEFAULT_ENDPOINT;
-  console.log("[311-etl] Fetching from Socrata (Code Compliance only)...");
+  console.log("[311-etl] Fetching from Socrata (all departments)...");
 
   const allRecords: Socrata311[] = [];
-  let offset = 0;
 
-  // Filter to Code Compliance in the Socrata query
-  while (offset < MAX_RECORDS) {
-    const url = `${endpoint}?$where=created_date>='${DATA_FLOOR}' AND department='Code Compliance'&$limit=${PAGE_SIZE}&$offset=${offset}&$order=created_date DESC`;
-    console.log(`[311-etl] Fetching offset=${offset}...`);
+  // Partition by year to avoid Socrata deep-pagination 500 errors
+  const startYear = 2020;
+  const endYear = new Date().getFullYear();
+  for (let year = startYear; year <= endYear; year++) {
+    const from = `${year}-01-01T00:00:00`;
+    const to = `${year + 1}-01-01T00:00:00`;
+    let offset = 0;
 
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Socrata ${res.status}: ${res.statusText}`);
-    const batch: Socrata311[] = await res.json();
+    while (offset < MAX_RECORDS) {
+      const url = `${endpoint}?$where=created_date>='${from}' AND created_date<'${to}'&$limit=${PAGE_SIZE}&$offset=${offset}`;
+      console.log(`[311-etl] Fetching ${year} offset=${offset}...`);
 
-    if (batch.length === 0) break;
-    allRecords.push(...batch);
-    offset += batch.length;
+      let res: Response;
+      let retries = 0;
+      while (true) {
+        res = await fetch(url);
+        if (res.ok || retries >= 3) break;
+        retries++;
+        console.log(`[311-etl] Retry ${retries}/3 after ${res.status}...`);
+        await new Promise((r) => setTimeout(r, 2000 * retries));
+      }
+      if (!res!.ok) throw new Error(`Socrata ${res!.status}: ${res!.statusText}`);
+      const batch: Socrata311[] = await res!.json();
 
-    if (batch.length < PAGE_SIZE) break;
+      if (batch.length === 0) break;
+      allRecords.push(...batch);
+      offset += batch.length;
+
+      if (batch.length < PAGE_SIZE) break;
+    }
   }
 
-  console.log(`[311-etl] Fetched ${allRecords.length.toLocaleString()} Code Compliance records`);
+  console.log(`[311-etl] Fetched ${allRecords.length.toLocaleString()} records`);
 
   // Aggregate
   const aggMap = new Map<string, number>();
@@ -111,6 +125,10 @@ export async function run311ETL(config?: ETL311Config): Promise<Request311Payloa
   const zipSet = new Set<string>();
   const seenKeys = new Set<string>();
   let maxDate = "";
+
+  // Only store points from last 12 months for dot map
+  const now = new Date();
+  const pointsCutoff = `${now.getFullYear() - 1}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
 
   for (const raw of allRecords) {
     if (!raw.created_date) continue;
@@ -140,8 +158,8 @@ export async function run311ETL(config?: ETL311Config): Promise<Request311Payloa
     const key = `${date}|${requestType}|${department}|${status}|${pg}|${district}|${zip}`;
     aggMap.set(key, (aggMap.get(key) ?? 0) + 1);
 
-    // Collect points for dot map (aggregate by location)
-    const ll = parseLatLon(raw.lat_location);
+    // Collect points for dot map (aggregate by location, recent only)
+    const ll = date >= pointsCutoff ? parseLatLon(raw.lat_location) : null;
     if (ll) {
       // Round to ~100m precision for aggregation
       const ptKey = `${ll.lat.toFixed(4)},${ll.lon.toFixed(4)}|${requestType}|${pg}|${date}`;
