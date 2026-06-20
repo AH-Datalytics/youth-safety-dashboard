@@ -11,6 +11,7 @@
  */
 import type { ArrestPayload, ArrestRecord } from "../src/lib/types/arrests";
 import { normalizeDistrict } from "./utils/normalize";
+import { fetchSocrataJSON } from "./utils/socrata-fetch";
 
 const DEFAULT_ENDPOINT = "https://www.dallasopendata.com/resource/sdr7-6v3j.json";
 const PAGE_SIZE = 50_000;
@@ -83,9 +84,7 @@ export async function runArrestsETL(config?: ArrestsETLConfig): Promise<ArrestPa
     const url = `${endpoint}?$select=ararrestdate,araction,race,sex,age,ageatarresttime,arldistrict,incidentnum,arrestnumber&$limit=${PAGE_SIZE}&$offset=${offset}&$order=ararrestdate DESC`;
     console.log(`[arrests-etl] Fetching offset=${offset}...`);
 
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Socrata ${res.status}: ${res.statusText}`);
-    const batch: SocrataArrest[] = await res.json();
+    const batch = await fetchSocrataJSON<SocrataArrest[]>(url, { label: "arrests-etl" });
 
     if (batch.length === 0) break;
     allRecords.push(...batch);

@@ -16,6 +16,7 @@ Output:
 import os
 import re
 import sys
+import time
 from pathlib import Path
 
 try:
@@ -78,27 +79,47 @@ def extract_lonlat(location: str) -> tuple[float | None, float | None]:
     return None, None
 
 
+def download_csv(url: str, dest: Path, attempts: int = 5) -> None:
+    """Stream a large CSV to disk, retrying the whole download on transient
+    network failures (dropped connections, incomplete reads, timeouts)."""
+    last_err = None
+    for attempt in range(1, attempts + 1):
+        if attempt > 1:
+            backoff = min(5 * 2 ** (attempt - 2), 60)
+            print(f"  Retry {attempt - 1}/{attempts - 1} after {backoff}s ({last_err})...")
+            time.sleep(backoff)
+        try:
+            print(f"Downloading CSV from Dallas Open Data (attempt {attempt})...")
+            resp = requests.get(url, stream=True, timeout=600)
+            resp.raise_for_status()
+
+            total_bytes = 0
+            with open(dest, "wb") as f:
+                for chunk in resp.iter_content(chunk_size=1024 * 1024):
+                    f.write(chunk)
+                    total_bytes += len(chunk)
+                    if total_bytes % (50 * 1024 * 1024) == 0:
+                        print(f"  Downloaded {total_bytes / (1024*1024):.0f} MB...")
+
+            print(f"  Downloaded {total_bytes / (1024*1024):.1f} MB total")
+            return
+        except (requests.exceptions.RequestException, OSError) as e:
+            last_err = e
+            # Clean up the partial file before retrying.
+            dest.unlink(missing_ok=True)
+
+    raise RuntimeError(f"CSV download failed after {attempts} attempts: {last_err}")
+
+
 def main():
     print("=== Dallas Police Incidents — CSV to Parquet ===")
 
-    # Download CSV
-    print(f"Downloading CSV from Dallas Open Data...")
-    resp = requests.get(CSV_URL, stream=True, timeout=600)
-    resp.raise_for_status()
-
-    # Save to temp file first (large download)
+    # Download CSV — Dallas Open Data intermittently drops the connection
+    # mid-stream (ChunkedEncodingError / IncompleteRead), so retry the whole
+    # streamed download with backoff.
     tmp_csv = OUTPUT_DIR / "_incidents_download.csv"
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-    total_bytes = 0
-    with open(tmp_csv, "wb") as f:
-        for chunk in resp.iter_content(chunk_size=1024 * 1024):
-            f.write(chunk)
-            total_bytes += len(chunk)
-            if total_bytes % (50 * 1024 * 1024) == 0:
-                print(f"  Downloaded {total_bytes / (1024*1024):.0f} MB...")
-
-    print(f"  Downloaded {total_bytes / (1024*1024):.1f} MB total")
+    download_csv(CSV_URL, tmp_csv)
 
     # Read CSV
     print("Reading CSV...")

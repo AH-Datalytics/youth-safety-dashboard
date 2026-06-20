@@ -22,6 +22,15 @@ interface ETLResult {
   error?: string;
 }
 
+/**
+ * ETLs pulling from the Dallas Open Data (Socrata) API. The portal is
+ * intermittently flaky; when one of these fails the last-good committed
+ * JSON.gz is retained and the dashboard keeps serving it, so we don't fail
+ * the whole refresh (which would also block the OneDrive-sourced data from
+ * being published). Local-file ETL failures remain fatal.
+ */
+const SOFT_FAIL_ETLS = new Set(["incidents", "arrests", "311"]);
+
 let currentOutputDir = "";
 
 function writeOutput(name: string, payload: unknown): void {
@@ -110,28 +119,47 @@ async function main() {
   console.log(`  Jurisdictions: ${JURISDICTIONS.map((j) => j.id).join(", ")}`);
   console.log("");
 
-  let totalFailed = 0;
+  let criticalFailed = 0;
+  let softFailed = 0;
 
   for (const j of JURISDICTIONS) {
     console.log(`\n========== ${j.name} (${j.id}) ==========`);
     const results = await refreshJurisdiction(j);
 
-    const failed = results.filter((r) => r.status === "FAILED");
     console.log(`\n  Summary for ${j.id}:`);
     for (const r of results) {
       const icon = r.status === "OK" ? "OK" : "FAILED";
       const detail = r.status === "OK" ? `${r.rows?.toLocaleString()} rows` : r.error;
       console.log(`    ${icon}: ${r.name} — ${detail}`);
     }
-    totalFailed += failed.length;
+
+    for (const r of results.filter((r) => r.status === "FAILED")) {
+      if (SOFT_FAIL_ETLS.has(r.name)) {
+        softFailed++;
+        // GitHub Actions warning annotation — visible without failing the run.
+        console.log(`::warning::[${j.id}] Socrata ETL "${r.name}" failed (${r.error}); serving last-good data.`);
+      } else {
+        criticalFailed++;
+      }
+    }
   }
 
-  if (totalFailed > 0) {
-    console.error(`\n${totalFailed} ETL(s) failed across all jurisdictions!`);
+  if (softFailed > 0) {
+    console.warn(
+      `\n${softFailed} Socrata ETL(s) failed — last-good data retained for those domains, other data published.`,
+    );
+  }
+
+  if (criticalFailed > 0) {
+    console.error(`\n${criticalFailed} critical (non-Socrata) ETL(s) failed!`);
     process.exit(1);
   }
 
-  console.log("\nAll ETLs completed successfully.");
+  console.log(
+    softFailed > 0
+      ? "\nRefresh completed with Socrata degradation (see warnings above)."
+      : "\nAll ETLs completed successfully.",
+  );
 }
 
 main().catch((err) => {

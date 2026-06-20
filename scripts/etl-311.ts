@@ -8,6 +8,7 @@
  */
 import type { Request311Payload, Request311Record, Request311Point } from "../src/lib/types/requests311";
 import { priorityGroup311 } from "./utils/normalize";
+import { fetchSocrataJSON } from "./utils/socrata-fetch";
 
 const DEFAULT_ENDPOINT = "https://www.dallasopendata.com/resource/d7e7-envw.json";
 const PAGE_SIZE = 10_000;
@@ -92,27 +93,7 @@ export async function run311ETL(config?: ETL311Config): Promise<Request311Payloa
       const url = `${endpoint}?$where=created_date>='${from}' AND created_date<'${to}'&$limit=${PAGE_SIZE}&$offset=${offset}`;
       console.log(`[311-etl] Fetching ${year} offset=${offset}...`);
 
-      let res: Response | undefined;
-      let lastErr: unknown;
-      for (let attempt = 0; attempt < 4; attempt++) {
-        if (attempt > 0) {
-          console.log(`[311-etl] Retry ${attempt}/3${lastErr ? ` (${lastErr})` : ""}...`);
-          await new Promise((r) => setTimeout(r, 2000 * attempt));
-        }
-        try {
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 60_000);
-          res = await fetch(url, { signal: controller.signal });
-          clearTimeout(timer);
-          if (res.ok) break;
-          lastErr = `HTTP ${res.status}`;
-        } catch (err) {
-          lastErr = err instanceof Error ? err.message : String(err);
-          res = undefined;
-        }
-      }
-      if (!res?.ok) throw new Error(`Socrata fetch failed after 4 attempts: ${lastErr}`);
-      const batch: Socrata311[] = await res!.json();
+      const batch = await fetchSocrataJSON<Socrata311[]>(url, { label: "311-etl" });
 
       if (batch.length === 0) break;
       allRecords.push(...batch);
