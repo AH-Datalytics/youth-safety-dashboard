@@ -10,6 +10,7 @@ import path from "path";
 import Papa from "papaparse";
 import type { IncidentPayload, IncidentRecord, IncidentHourly, IncidentPoint, NIBRSTreeNode } from "../src/lib/types/incidents";
 import { normalizeDistrict, caseStatus, normalizeCrimeAgainst, normalizeOffenseGroup, normalizeNibrs } from "./utils/normalize";
+import { fetchSocrataJSON } from "./utils/socrata-fetch";
 
 const DEFAULT_ETL_CSV = path.join(process.cwd(), "data", "generated", "_incidents-etl.csv");
 const DEFAULT_SOCRATA_URL = "https://www.dallasopendata.com/resource/qv6i-rri7.json";
@@ -165,9 +166,7 @@ async function runFromSocrataJSON(socrataJsonUrl: string = DEFAULT_SOCRATA_URL):
     const url = `${socrataJsonUrl}?$where=date1>='${DATA_FLOOR}T00:00:00'&$select=date1,offincident,nibrs_crimeagainst,nibrs_crime_category,nibrs_crime,district,zip_code,ucr_disp,time1,geocoded_column&$limit=${PAGE_SIZE}&$offset=${offset}&$order=date1 DESC`;
     console.log(`[incidents-etl] Fetching offset=${offset}...`);
 
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Socrata ${res.status}: ${res.statusText}`);
-    const batch = await res.json() as Array<Record<string, unknown>>;
+    const batch = await fetchSocrataJSON<Array<Record<string, unknown>>>(url, { label: "incidents-etl" });
 
     if (batch.length === 0) break;
     totalFetched += batch.length;
