@@ -43,10 +43,15 @@ jobs:
         run: pip install -r scripts/requirements.txt
 
       - name: Prepare data files (parallel)
+        # Don't fail the whole job if the incidents parquet prep dies — the
+        # incidents ETL falls back to the Socrata JSON API. But do surface it.
         run: |
-          python scripts/prepare-incidents-parquet.py &
-          python scripts/prepare-cfs-csv.py &
-          wait
+          python scripts/prepare-incidents-parquet.py & pid_inc=$!
+          python scripts/prepare-cfs-csv.py & pid_cfs=$!
+          rc=0
+          wait $pid_inc || { echo "::warning::prepare-incidents-parquet.py failed; incidents ETL will fall back to Socrata JSON."; }
+          wait $pid_cfs || { echo "::error::prepare-cfs-csv.py failed."; rc=1; }
+          exit $rc
 
       - name: Run ETL pipelines
         run: npm run refresh-data
@@ -56,5 +61,20 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/generated/
-          git diff --staged --quiet || git commit -m "chore: refresh data $(date -u +%Y-%m-%d)"
-          git push
+          if git diff --staged --quiet; then
+            echo "No data changes to commit."
+            exit 0
+          fi
+          git commit -m "chore: refresh data $(date -u +%Y-%m-%d)"
+          # Rebase onto any concurrent pushes (e.g. a code change landing
+          # mid-run) before pushing, with a few retries to avoid losing data.
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt) — rebasing on latest master..."
+            git pull --rebase --autostash origin master
+            sleep $((attempt * 3))
+          done
+          echo "::error::Failed to push refreshed data after 5 attempts."
+          exit 1
