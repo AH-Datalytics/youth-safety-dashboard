@@ -45,15 +45,6 @@ export interface JurisdictionConfig {
     requests311: string;
   };
 
-  /** OneDrive paths for partner data */
-  onedrive?: {
-    basePath: string;
-    cfsFile?: string;
-    campusFiles?: string[];
-    tjjdFile?: string;
-    crosswalks?: string[];
-  };
-
   /** Map defaults */
   geo?: {
     center: [number, number];
@@ -180,9 +171,6 @@ export const JURISDICTIONS: JurisdictionConfig[] = [
       incidents: "qv6i-rri7",
       arrests: "sdr7-6v3j",
       requests311: "d7e7-envw",
-    },
-    onedrive: {
-      basePath: "/Clients/NLC/Dallas/PowerBI",
     },
     geo: {
       center: [32.7767, -96.797],
