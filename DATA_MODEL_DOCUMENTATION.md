@@ -86,8 +86,8 @@
 - `https://www.dallasopendata.com/OData.svc/sdr7-6v3j`
 - `https://www.dallasopendata.com/OData.svc/gc4d-8a49`
 
-### 2.2 SharePoint (AH Datalytics OneDrive)
-Base URL: `https://ahdatalytics-my.sharepoint.com/personal/bhorwitz_ahdatalytics_com/Documents/Clients/NLC/Dallas/PowerBI/`
+### 2.2 Public-Records Source Files
+Source files are maintained outside the repository and loaded by the ETL at runtime.
 
 | File | Used By | Format |
 |------|---------|--------|
@@ -631,11 +631,10 @@ Paginated Socrata JSON fetcher with incremental refresh:
 - Department fix: "Environmental Quality" → "Environmental Quality & Sustainability"
 
 #### Incidents 2017-2025 pre-load
-Reads Parquet file from SharePoint for fast historical incident loading:
+Reads a Parquet file for fast historical incident loading:
 ```m
-Site = "https://ahdatalytics-my.sharepoint.com/personal/bhorwitz_ahdatalytics_com"
 FileName = "Police_Incidents_2017_2025.parquet"
--- SharePoint.Files → filter → Binary.Buffer → Parquet.Document
+-- Source files → filter → Binary.Buffer → Parquet.Document
 ```
 
 #### Original Incident query
@@ -663,8 +662,7 @@ Full legacy 311 processing pipeline:
 All Call 2017–2025 expressions follow the same pattern:
 ```m
 let
-    Source = Excel.Workbook(Web.Contents(
-        "https://ahdatalytics-my.sharepoint.com/.../Calls%20for%20Service.xlsx"), null, true),
+    Source = Excel.Workbook(File.Contents("Calls for Service.xlsx"), null, true),
     Sheet = Source{[Item="Call YYYY", Kind="Sheet"]}[Data],
     Headers = Table.PromoteHeaders(Sheet, [PromoteAllScalars=true])
 in
