@@ -8,6 +8,10 @@ on:
 env:
   NODE_OPTIONS: --max-old-space-size=8192
 
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
