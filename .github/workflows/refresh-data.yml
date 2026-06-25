@@ -36,6 +36,8 @@ jobs:
           SHAREPOINT_CLIENT_ID: ${{ secrets.SHAREPOINT_CLIENT_ID }}
           SHAREPOINT_CLIENT_SECRET: ${{ secrets.SHAREPOINT_CLIENT_SECRET }}
           SHAREPOINT_DRIVE_ID: ${{ secrets.SHAREPOINT_DRIVE_ID }}
+          SHAREPOINT_SOURCE_BASE_PATH: ${{ vars.SHAREPOINT_SOURCE_BASE_PATH }}
+          SHAREPOINT_TJJD_FILE_PATH: ${{ vars.SHAREPOINT_TJJD_FILE_PATH }}
 
       - uses: actions/setup-python@v5
         with:

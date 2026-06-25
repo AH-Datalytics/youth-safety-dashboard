@@ -4,7 +4,8 @@
  *
  * Usage: npx tsx scripts/download-sharepoint-files.ts
  * Requires env vars: SHAREPOINT_TENANT_ID, SHAREPOINT_CLIENT_ID,
- *   SHAREPOINT_CLIENT_SECRET, SHAREPOINT_DRIVE_ID
+ *   SHAREPOINT_CLIENT_SECRET, SHAREPOINT_DRIVE_ID,
+ *   SHAREPOINT_SOURCE_BASE_PATH, SHAREPOINT_TJJD_FILE_PATH
  */
 
 import fs from "fs";
@@ -13,8 +14,8 @@ import { downloadSharePointFile } from "./sharepoint-auth";
 
 const DRIVE_ID = process.env.SHAREPOINT_DRIVE_ID || "";
 
-// Base path on OneDrive: Clients/NLC/Dallas/PowerBI/
-const BASE = "/Clients/NLC/Dallas/PowerBI";
+const BASE = process.env.SHAREPOINT_SOURCE_BASE_PATH || "";
+const TJJD_FILE_PATH = process.env.SHAREPOINT_TJJD_FILE_PATH || "";
 
 // Files to download: [OneDrive path (relative to drive root), local destination]
 const FILES: Array<[string, string]> = [
@@ -29,7 +30,7 @@ const FILES: Array<[string, string]> = [
   [`${BASE}/CAMPUS_summary_24.csv`, "data/source/CAMPUS_summary_24.csv"],
   [`${BASE}/Redacted Youth Justice Data.xlsx`, "data/source/Redacted Youth Justice Data.xlsx"],
   [`${BASE}/Directory2024.csv`, "data/source/Directory2024.csv"],
-  ["/Clients/NLC/Dallas/2025 Data Update/TJJD/Family Code 58.009 data request  #41104.xlsx", "data/source/Family Code 58.009 data request #41104.xlsx"],
+  [TJJD_FILE_PATH, "data/source/Family Code 58.009 data request #41104.xlsx"],
   // Crosswalk files
   [`${BASE}/XWalk - NIBRS.xlsx`, "data/crosswalks/XWalk - NIBRS.xlsx"],
   [`${BASE}/XWalk - Discipline.xlsx`, "data/crosswalks/XWalk - Discipline.xlsx"],
@@ -58,6 +59,12 @@ async function main() {
 
   if (!DRIVE_ID) {
     throw new Error("Missing SHAREPOINT_DRIVE_ID environment variable.");
+  }
+  if (!BASE) {
+    throw new Error("Missing SHAREPOINT_SOURCE_BASE_PATH environment variable.");
+  }
+  if (!TJJD_FILE_PATH) {
+    throw new Error("Missing SHAREPOINT_TJJD_FILE_PATH environment variable.");
   }
 
   const totalStart = Date.now();
