@@ -50,8 +50,20 @@ jobs:
         # Don't fail the whole job if the incidents parquet prep dies — the
         # incidents ETL falls back to the Socrata JSON API. But do surface it.
         run: |
-          python scripts/prepare-incidents-parquet.py & pid_inc=$!
-          python scripts/prepare-cfs-csv.py & pid_cfs=$!
+          timed_run() {
+            label="$1"
+            shift
+            start=$(date +%s)
+            echo "[$label] starting at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            "$@"
+            rc=$?
+            end=$(date +%s)
+            echo "[$label] finished in $((end - start))s with exit code $rc"
+            return $rc
+          }
+
+          timed_run "prepare-incidents-parquet" python scripts/prepare-incidents-parquet.py & pid_inc=$!
+          timed_run "prepare-cfs-csv" python scripts/prepare-cfs-csv.py & pid_cfs=$!
           rc=0
           wait $pid_inc || { echo "::warning::prepare-incidents-parquet.py failed; incidents ETL will fall back to Socrata JSON."; }
           wait $pid_cfs || { echo "::error::prepare-cfs-csv.py failed."; rc=1; }
