@@ -738,7 +738,7 @@ Persistent across all pages:
 
 ---
 
-## Implementation Notes for Claude Code
+## Implementation Notes
 
 ### Technology Recommendations
 - **Framework**: React with TypeScript
