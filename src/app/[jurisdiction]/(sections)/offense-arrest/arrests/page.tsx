@@ -15,7 +15,8 @@ import { KPIBannerSkeleton, ChartSkeleton } from "@/components/ui/loading-skelet
 import { cn } from "@/lib/utils";
 import { PageToggle } from "@/components/ui/page-toggle";
 import { useJurisdiction } from "@/lib/jurisdiction-context";
-import { getSections } from "@/lib/jurisdictions";
+import { getSections, isPageHidden } from "@/lib/jurisdictions";
+import { notFound } from "next/navigation";
 
 const DEMOGRAPHIC_TABS: { key: DemographicTab; label: string }[] = [
   { key: "youngAdult", label: "Young Adult vs Adult" },
@@ -91,6 +92,11 @@ export default function ArrestsPage() {
 
     return { lineData: data, seriesNames: names };
   }, [filteredData, store.demographicTab]);
+
+  // Every chart on this page is arrest-based, so a jurisdiction with no arrest
+  // dataset has nothing to show. The page is dropped from nav; a direct visit
+  // 404s rather than rendering empty axes.
+  if (isPageHidden(config, "arrests")) notFound();
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-6">

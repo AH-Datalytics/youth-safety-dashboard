@@ -6,7 +6,10 @@ export default function AboutPage() {
   const config = useJurisdiction();
 
   const socrataBase = config.socrata?.baseUrl;
+  const hasNotice = (domain: "cfs" | "311") => Boolean(config.dataNotices?.[domain]);
+
   const dataSources = [
+    // Offenses come from Socrata (Dallas) or an ArcGIS Feature Service (Fort Worth).
     ...(config.socrata
       ? [
           {
@@ -21,6 +24,24 @@ export default function AboutPage() {
             url: `${socrataBase}/${config.socrata.arrests}`,
             description: "Arrest records with demographic and charge details.",
           },
+        ]
+      : []),
+    ...(config.arcgis
+      ? [
+          {
+            domain: "Police Incidents",
+            source: "Fort Worth Open Data — CFW Police Crime Data",
+            url: "https://data.fortworthtexas.gov/datasets/CFW::cfw-police-crime-data-points",
+            description:
+              "NIBRS-coded offense records for the City of Fort Worth since 2017, refreshed " +
+              "weekly. No clearance or disposition field is published, so case status is " +
+              "reported as unknown and the arrestee-age clearance measures are unavailable. " +
+              "Covers Fort Worth city, not all of Tarrant County.",
+          },
+        ]
+      : []),
+    ...(config.socrata
+      ? [
           {
             domain: "311 Service Requests",
             source: `${config.shortName} Open Data — 311 Requests`,
@@ -29,15 +50,32 @@ export default function AboutPage() {
           },
         ]
       : []),
-    {
-      domain: "Calls for Service",
-      source: `${config.shortName} Police Department — CFS Data`,
-      description: "Monthly CFS exports joined with call type and disposition crosswalks.",
-    },
+    // Domains with a data notice have no source for this jurisdiction yet.
+    ...(hasNotice("cfs")
+      ? []
+      : [
+          {
+            domain: "Calls for Service",
+            source: `${config.shortName} Police Department — CFS Data`,
+            description:
+              "Monthly CFS exports joined with call type and disposition crosswalks.",
+          },
+        ]),
     {
       domain: "Youth Court Referrals",
-      source: "Texas Juvenile Justice Department — Referral Data",
-      description: "Monthly TJJD referral data by category (age, offense, disposition, etc.).",
+      source:
+        config.youthCourt?.kind === "tjjd-county"
+          ? "Texas Juvenile Justice Department — County Level Referral Data"
+          : "Texas Juvenile Justice Department — Referral Data",
+      url:
+        config.youthCourt?.kind === "tjjd-county"
+          ? "https://data.texas.gov/d/54dk-5ghb"
+          : undefined,
+      description:
+        config.youthCourt?.kind === "tjjd-county"
+          ? "Annual county-level referral counts with offense-type splits, FY2013–2021. " +
+            "Coarser than the monthly, ZIP-level extract available for Dallas County."
+          : "Monthly TJJD referral data by category (age, offense, disposition, etc.).",
     },
     {
       domain: "School Discipline",
@@ -99,14 +137,18 @@ export default function AboutPage() {
             <strong>NIBRS hierarchy</strong> follows the FBI&apos;s National Incident-Based Reporting
             System: Crime Against Person/Property/Society, Offense Group, and specific NIBRS code.
           </li>
-          <li>
-            <strong>CFS response times</strong> are calculated as the difference between first unit
-            assigned and first unit arrived on scene, in minutes. Negative values are excluded.
-          </li>
-          <li>
-            <strong>311 requests</strong> are filtered to the Code Compliance department only, per the
-            original Power BI analysis scope.
-          </li>
+          {!hasNotice("cfs") && (
+            <li>
+              <strong>CFS response times</strong> are calculated as the difference between first unit
+              assigned and first unit arrived on scene, in minutes. Negative values are excluded.
+            </li>
+          )}
+          {!hasNotice("311") && (
+            <li>
+              <strong>311 requests</strong> are filtered to the Code Compliance department only, per the
+              original Power BI analysis scope.
+            </li>
+          )}
           <li>
             <strong>School discipline data</strong> comes from TEA CAMPUS discipline summaries,
             joined with the TEA school directory to filter to {config.name} campuses.

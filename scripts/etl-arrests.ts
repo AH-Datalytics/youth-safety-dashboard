@@ -20,6 +20,28 @@ const MAX_RECORDS = 500_000;
 export interface ArrestsETLConfig {
   baseUrl?: string;
   datasetId?: string;
+  /**
+   * False when the jurisdiction publishes no arrest dataset. The Demographics
+   * page is hidden from nav in that case, but the API path still resolves, so
+   * the ETL emits an empty payload rather than failing.
+   */
+  available?: boolean;
+}
+
+/** Empty payload for jurisdictions with no arrest source. */
+function emptyPayload(): ArrestPayload {
+  return {
+    lastUpdated: new Date().toISOString(),
+    dataThrough: "",
+    records: [],
+    charges: [],
+    races: [],
+    sexes: [],
+    ageGroups: [],
+    youngAdultGroups: [],
+    districts: [],
+    summary: { total: 0, ytdCurrent: 0, ytdPrior: 0, pctChange: 0 },
+  };
 }
 
 interface SocrataArrest {
@@ -71,6 +93,10 @@ function cleanSex(raw: string | undefined): string {
 }
 
 export async function runArrestsETL(config?: ArrestsETLConfig): Promise<ArrestPayload> {
+  if (config?.available === false) {
+    console.log("[arrests-etl] No arrest source for this jurisdiction — emitting empty payload");
+    return emptyPayload();
+  }
   const endpoint = config?.baseUrl && config?.datasetId
     ? `${config.baseUrl}/${config.datasetId}.json`
     : DEFAULT_ENDPOINT;

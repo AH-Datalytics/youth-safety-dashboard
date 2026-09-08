@@ -12,6 +12,13 @@ const fetcher = async (url: string) => {
   return res.json();
 };
 
+/** Sort labels so embedded numbers compare numerically ("2" before "10"). */
+function sortNumericAware(values: string[]): string[] {
+  return [...values].sort((a, b) =>
+    a.localeCompare(b, "en", { numeric: true, sensitivity: "base" }),
+  );
+}
+
 export function useIncidents() {
   const url = useApiUrl("incidents");
   const { data, error, isLoading } = useSWR<IncidentPayload>(
@@ -58,8 +65,11 @@ export function useFilteredIncidents() {
           offenseTypes: data.offenseTypes,
           crimeAgainsts: data.crimeAgainsts,
           categories: data.categories,
-          districts: data.districts,
-          zipCodes: data.zipCodes,
+          // Numeric-aware: Fort Worth's districts are numbers, so a plain
+          // string sort would order them 1, 10, 11, 2. Dallas's are names and
+          // compare the same either way.
+          districts: sortNumericAware(data.districts),
+          zipCodes: sortNumericAware(data.zipCodes),
           caseStatuses: data.caseStatuses,
           summary: data.summary,
         }

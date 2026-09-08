@@ -17,15 +17,20 @@ import { PageToggle } from "@/components/ui/page-toggle";
 import { useJurisdiction } from "@/lib/jurisdiction-context";
 import { getSections } from "@/lib/jurisdictions";
 
-const CASE_STATUS_TABS = [
-  "All",
+/**
+ * Preferred order for case-status tabs. Only statuses actually present in the
+ * jurisdiction's payload are rendered — Fort Worth publishes no clearance or
+ * disposition field, so showing an empty "Cleared (Arrestee Age 17 or Under)"
+ * tab there would read as "no youth clearances" rather than "not published".
+ */
+const CASE_STATUS_ORDER = [
   "Cleared (Arrestee Age 17 or Under)",
   "Cleared (Arrestee 18 or Older)",
   "Open",
   "Closed",
   "Suspended",
   "Unknown",
-] as const;
+];
 
 /** Compute default date range: Jan 1 of 2 years ago through data end */
 function defaultDateFrom(): string {
@@ -78,6 +83,20 @@ export default function OffenseOverviewPage() {
     if (store.activeCaseStatus === "All") return filteredData;
     return filteredData.filter((r) => r.cs === store.activeCaseStatus);
   }, [filteredData, store.activeCaseStatus]);
+
+  // Fort Worth's crime layer publishes no clearance field, so the
+  // arrestee-age measures have no source rather than a value of zero.
+  const noClearanceData = (config.unavailableMeasures ?? []).includes("youth-clearance");
+
+  // "All", then only the statuses this jurisdiction's data actually contains.
+  const caseStatusTabs = useMemo(() => {
+    const present = new Set(metadata?.caseStatuses ?? []);
+    const ordered = CASE_STATUS_ORDER.filter((s) => present.has(s));
+    const extra = Array.from(present)
+      .filter((s) => !CASE_STATUS_ORDER.includes(s))
+      .sort();
+    return ["All", ...ordered, ...extra];
+  }, [metadata?.caseStatuses]);
 
   // KPIs
   const ytd = useMemo(() => computeYTD(tabFiltered), [tabFiltered]);
@@ -171,7 +190,7 @@ export default function OffenseOverviewPage() {
 
           {/* Case Status Tabs */}
           <div className="flex flex-wrap gap-1">
-            {CASE_STATUS_TABS.map((tab) => (
+            {caseStatusTabs.map((tab) => (
               <button
                 key={tab}
                 onClick={() => store.setActiveCaseStatus(tab)}
@@ -202,12 +221,14 @@ export default function OffenseOverviewPage() {
               value={under17.ytd.currentYTD}
               priorValue={under17.ytd.priorYTD}
               pctChange={under17.ytd.pctChange}
+              unavailable={noClearanceData}
             />
             <KPICard
               label="Arrests (18 & Older)"
               value={over18.ytd.currentYTD}
               priorValue={over18.ytd.priorYTD}
               pctChange={over18.ytd.pctChange}
+              unavailable={noClearanceData}
             />
           </div>
           {metadata?.dataThrough && (

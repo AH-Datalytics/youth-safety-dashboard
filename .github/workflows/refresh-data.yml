@@ -15,7 +15,11 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # Dallas is ~20-25 min. Tarrant adds ~25-30 min: Fort Worth's ArcGIS layer
+    # caps pages at 1,000 records and throttles concurrent requests, so ~576
+    # pages is the floor for a full incidents pull. Raised from 60 when Tarrant
+    # was added.
+    timeout-minutes: 90
     permissions:
       contents: write
 

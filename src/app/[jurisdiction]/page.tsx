@@ -55,6 +55,8 @@ export default function JurisdictionHomePage() {
   );
 
   const prefix = `/${config.id}`;
+  // Dallas publishes as the county; Fort Worth's ArcGIS layer is city-scoped.
+  const openDataLabel = config.arcgis ? "Fort Worth" : config.shortName;
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
@@ -81,6 +83,7 @@ export default function JurisdictionHomePage() {
         clearedOver18={data?.banner?.clearedOver18 ?? null}
         requests311={data?.banner?.requests311 ?? null}
         isLoading={isLoading}
+        unavailableMeasures={config.unavailableMeasures ?? []}
       />
 
       {/* Section cards grid */}
@@ -114,7 +117,7 @@ export default function JurisdictionHomePage() {
             ytdPctChange={data?.youthCourt?.ytdPctChange ?? null}
             monthlyData={data?.youthCourt?.monthlyData ?? []}
             isLoading={isLoading}
-            valueLabel="Latest School Year"
+            valueLabel="Latest Year"
           />
         )}
         {config.domains.includes("school-discipline") && (
@@ -137,22 +140,30 @@ export default function JurisdictionHomePage() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div>
-            <h3 className="font-semibold mb-1">Open Data (Socrata API)</h3>
+            <h3 className="font-semibold mb-1">
+              {config.socrata ? "Open Data (Socrata API)" : "Open Data (ArcGIS)"}
+            </h3>
             <ul className="text-[#666] space-y-1">
-              <li>{config.shortName} Police Incidents (2017–present)</li>
-              <li>{config.shortName} Arrests</li>
-              <li>311 Service Requests</li>
+              <li>{openDataLabel} Police Incidents (2017–present)</li>
+              {config.socrata && <li>{config.shortName} Arrests</li>}
+              {config.socrata && <li>311 Service Requests</li>}
             </ul>
           </div>
           <div>
-            <h3 className="font-semibold mb-1">Partner Data</h3>
+            <h3 className="font-semibold mb-1">Partner &amp; State Data</h3>
             <ul className="text-[#666] space-y-1">
-              <li>{config.shortName} Police Calls for Service</li>
+              {config.cfsSource && <li>{config.shortName} Police Calls for Service</li>}
               <li>TJJD Youth Court Referrals</li>
               <li>TEA CAMPUS Disciplinary Data</li>
             </ul>
           </div>
         </div>
+        {config.arcgis && (
+          <p className="text-xs text-[#999] mt-3">
+            Offense data covers the City of Fort Worth. No other jurisdiction in{" "}
+            {config.name} publishes incident-level crime data.
+          </p>
+        )}
       </section>
     </div>
   );

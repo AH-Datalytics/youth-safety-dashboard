@@ -11,7 +11,12 @@ import { ChoroplethMap } from "@/components/charts/choropleth-map";
 import { ChartSkeleton } from "@/components/ui/loading-skeleton";
 import { cn } from "@/lib/utils";
 
-const CATEGORIES = [
+/**
+ * Preferred tab order for the Dallas 58.009 shape. Categories present in the
+ * payload but absent here are appended, so a source with a different set of
+ * cuts (e.g. TJJD's county file) still gets tabs.
+ */
+const CATEGORY_ORDER = [
   "Age",
   "Disposition",
   "Gender",
@@ -24,9 +29,23 @@ const tjjdCols = DOWNLOAD_DOMAINS.find((d) => d.domainId === "tjjd")!.columns;
 
 export default function YouthCourtReferralsPage() {
   const { data: rawPayload } = useTJJD();
-  const { filteredData, rangeTotal, zipRecords, monthlyTimeSeries, isLoading } =
+  const { filteredData, rangeTotal, zipRecords, monthlyTimeSeries, metadata, isLoading } =
     useFilteredTJJD();
   const store = useTJJDStore();
+
+  const granularity = metadata?.granularity ?? "monthly";
+
+  // Tabs come from the payload, so a jurisdiction only sees the cuts its
+  // source actually provides. The total category is excluded — it's the
+  // headline number, not a breakdown.
+  const categories = useMemo(() => {
+    const available = (metadata?.categories ?? []).filter(
+      (c) => c !== metadata?.totalCategory,
+    );
+    const known = CATEGORY_ORDER.filter((c) => available.includes(c));
+    const extra = available.filter((c) => !CATEGORY_ORDER.includes(c)).sort();
+    return [...known, ...extra];
+  }, [metadata?.categories, metadata?.totalCategory]);
 
   // Detail breakdown for selected category
   const detailData = useMemo(() => {
@@ -45,9 +64,17 @@ export default function YouthCourtReferralsPage() {
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-6">
       {/* Title + total */}
       <div className="flex items-baseline justify-between gap-3">
-        <h1 className="font-serif text-lg md:text-xl font-bold">
-          Youth Court Referrals
-        </h1>
+        <div>
+          <h1 className="font-serif text-lg md:text-xl font-bold">
+            Youth Court Referrals
+          </h1>
+          {metadata?.sourceLabel && (
+            <p className="text-xs text-[#666] mt-0.5">
+              {granularity === "annual" ? "Annual" : "Monthly"} ·{" "}
+              {metadata.sourceLabel}
+            </p>
+          )}
+        </div>
         <div className="flex items-center gap-3">
           {!isLoading && (
             <span className="font-mono text-lg font-bold text-primary">
@@ -73,12 +100,13 @@ export default function YouthCourtReferralsPage() {
           startIndex={store.startIndex}
           endIndex={store.endIndex}
           onRangeChange={(start, end) => store.setRange(start, end)}
+          granularity={granularity}
         />
       )}
 
       {/* Category tabs */}
       <div className="flex flex-wrap items-center gap-2">
-        {CATEGORIES.map((cat) => (
+        {categories.map((cat) => (
           <button
             key={cat}
             onClick={() =>
@@ -119,8 +147,8 @@ export default function YouthCourtReferralsPage() {
         </>
       )}
 
-      {/* ZIP choropleth map */}
-      {!isLoading && (
+      {/* ZIP choropleth map — only sources with ZIP detail can render it */}
+      {!isLoading && zipRecords.length > 0 && (
         <ChoroplethMap
           zipRecords={zipRecords}
           title="Court Referrals by ZIP Code"

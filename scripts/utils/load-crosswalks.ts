@@ -36,13 +36,17 @@ export function loadNIBRS(): NIBRSEntry[] {
   }
   const wb = XLSX.readFile(filePath);
   const sheet = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" }) as Record<string, string>[];
+  const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" }) as Record<string, unknown>[];
+
+  // Numeric-looking NIBRS codes (120, 240, ...) come back from xlsx as numbers,
+  // so every cell has to be coerced before trimming.
+  const cell = (v: unknown): string => (v === null || v === undefined ? "" : String(v).trim());
 
   nibrsCache = rows.map((r) => ({
-    crimeAgainst: (r["Crime Against"] ?? "").trim(),
-    offense: (r["Offense"] ?? "").trim(),
-    offenseDescription: (r["Offense Description"] ?? "").trim(),
-    nibrsCode: (r["NIBRS Code"] ?? "").trim(),
+    crimeAgainst: cell(r["Crime Against"]),
+    offense: cell(r["Offense"]),
+    offenseDescription: cell(r["Offense Description"]),
+    nibrsCode: cell(r["NIBRS Code"]),
   }));
   console.log(`[crosswalks] Loaded ${nibrsCache.length} NIBRS entries`);
   return nibrsCache;
