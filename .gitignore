@@ -41,7 +41,11 @@ next-env.d.ts
 
 # Source data (downloaded from OneDrive at runtime)
 data/source/
-data/crosswalks/
+data/crosswalks/*
+# ...except the geocode cache, which is derived from public school addresses
+# and is NOT in the OneDrive download list. Without it committed, the campus
+# ETL emits schools with lat/lon 0 and the school dot map renders empty.
+!data/crosswalks/school-geocodes.json
 
 # Temp files from ETL
 data/generated/_*
