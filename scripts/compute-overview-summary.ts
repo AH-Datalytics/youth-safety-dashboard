@@ -141,6 +141,8 @@ type Request311Data = {
 
 type TJJDData = {
   records?: Array<{ cat: string; desc: string; yr: string; mo: number; v: number }>;
+  /** Category that partitions referrals exactly once. Defaults to "Gender". */
+  totalCategory?: string;
   summary?: { totalReferrals: number };
 };
 
@@ -253,9 +255,13 @@ export function computeOverviewSummary(dir?: string): OverviewSummary {
   // Youth Court (TJJD — now year-based, not school-year-based)
   let youthCourtCard: CardSummary | null = null;
   if (tjjdData?.records && tjjdData.records.length > 0) {
-    // Aggregate by year
+    // Every category in the TJJD payload is a re-cut of the same referrals, so
+    // only the designated total category may be summed. Summing all of them
+    // multiplies the count by the number of category cuts.
+    const totalCategory = tjjdData.totalCategory ?? "Gender";
     const byYear = new Map<string, number>();
     for (const r of tjjdData.records) {
+      if (r.cat !== totalCategory) continue;
       byYear.set(r.yr, (byYear.get(r.yr) || 0) + r.v);
     }
     const sortedYears = Array.from(byYear.keys()).sort();

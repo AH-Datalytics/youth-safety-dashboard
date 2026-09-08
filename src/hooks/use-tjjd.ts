@@ -32,14 +32,19 @@ function buildMonthKeys(records: TJJDRecord[]): string[] {
   return Array.from(set).sort();
 }
 
-/** Aggregate monthly time series: sum "Gender" category per month for true total */
+/**
+ * Aggregate the time series by summing only the payload's total category.
+ * Categories are alternative cuts of the same referrals, so summing all of
+ * them would multiply-count.
+ */
 function buildMonthlyTimeSeries(
   records: TJJDRecord[],
   monthKeys: string[],
+  totalCategory: string,
 ): { month: string; count: number }[] {
   const map = new Map<string, number>();
   for (const r of records) {
-    if (r.cat !== "Gender") continue;
+    if (r.cat !== totalCategory) continue;
     const key = `${r.yr}-${String(r.mo).padStart(2, "0")}`;
     map.set(key, (map.get(key) ?? 0) + r.v);
   }
@@ -49,6 +54,7 @@ function buildMonthlyTimeSeries(
 export function useFilteredTJJD() {
   const { data, error, isLoading } = useTJJD();
   const { startIndex, endIndex, category } = useTJJDStore();
+  const totalCategory = data?.totalCategory ?? "Gender";
 
   const monthKeys = useMemo(
     () => (data?.records ? buildMonthKeys(data.records) : []),
@@ -56,8 +62,11 @@ export function useFilteredTJJD() {
   );
 
   const monthlyTimeSeries = useMemo(
-    () => (data?.records ? buildMonthlyTimeSeries(data.records, monthKeys) : []),
-    [data?.records, monthKeys],
+    () =>
+      data?.records
+        ? buildMonthlyTimeSeries(data.records, monthKeys, totalCategory)
+        : [],
+    [data?.records, monthKeys, totalCategory],
   );
 
   /** Set of "YYYY-MM" keys within the brush range */
@@ -95,7 +104,7 @@ export function useFilteredTJJD() {
     if (!data?.records) return 0;
     let sum = 0;
     for (const r of data.records) {
-      if (r.cat !== "Gender") continue;
+      if (r.cat !== totalCategory) continue;
       if (activeMonthKeys) {
         const key = `${r.yr}-${String(r.mo).padStart(2, "0")}`;
         if (!activeMonthKeys.has(key)) continue;
@@ -103,7 +112,7 @@ export function useFilteredTJJD() {
       sum += r.v;
     }
     return sum;
-  }, [data?.records, activeMonthKeys]);
+  }, [data?.records, activeMonthKeys, totalCategory]);
 
   return {
     filteredData: filtered,
@@ -117,6 +126,9 @@ export function useFilteredTJJD() {
           categories: data.categories,
           descriptions: data.descriptions,
           years: data.years,
+          granularity: data.granularity ?? "monthly",
+          totalCategory,
+          sourceLabel: data.sourceLabel,
           summary: data.summary,
         }
       : null,

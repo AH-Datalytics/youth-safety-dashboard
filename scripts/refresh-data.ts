@@ -23,11 +23,12 @@ interface ETLResult {
 }
 
 /**
- * ETLs pulling from the Dallas Open Data (Socrata) API. The portal is
- * intermittently flaky; when one of these fails the last-good committed
- * JSON.gz is retained and the dashboard keeps serving it, so we don't fail
- * the whole refresh (which would also block the OneDrive-sourced data from
- * being published). Local-file ETL failures remain fatal.
+ * ETLs pulling from a third-party open-data API (Dallas Socrata, Fort Worth
+ * ArcGIS). Those portals are intermittently flaky; when one of these fails the
+ * last-good committed JSON.gz is retained and the dashboard keeps serving it,
+ * so we don't fail the whole refresh (which would also block the
+ * OneDrive-sourced data from being published). Local-file ETL failures remain
+ * fatal.
  */
 const SOFT_FAIL_ETLS = new Set(["incidents", "arrests", "311"]);
 
@@ -73,29 +74,57 @@ async function refreshJurisdiction(j: JurisdictionConfig): Promise<ETLResult[]> 
 
   const allResults: ETLResult[] = [];
 
-  // Socrata ETLs (if configured)
-  if (j.socrata) {
-    console.log("  --- Socrata APIs (Incidents, Arrests, 311) ---");
-    const socrataResults = await Promise.all([
+  // Open-data ETLs. A jurisdiction is on Socrata (Dallas) or on an ArcGIS
+  // Feature Service (Fort Worth). Domains with no published dataset emit an
+  // empty payload so the routed page renders its "no source" notice instead of
+  // a fetch error.
+  if (j.socrata || j.arcgis) {
+    console.log("  --- Open Data APIs (Incidents, Arrests, 311) ---");
+    const openDataResults = await Promise.all([
       runETL("incidents", () =>
-        runIncidentsETL({ baseUrl: j.socrata!.baseUrl, datasetId: j.socrata!.incidents }),
+        runIncidentsETL(
+          j.arcgis
+            ? {
+                arcgis: {
+                  layerUrl: j.arcgis.incidents,
+                  fields: j.arcgis.incidentFields,
+                },
+              }
+            : { baseUrl: j.socrata!.baseUrl, datasetId: j.socrata!.incidents },
+        ),
       ),
       runETL("arrests", () =>
-        runArrestsETL({ baseUrl: j.socrata!.baseUrl, datasetId: j.socrata!.arrests }),
+        runArrestsETL(
+          j.socrata
+            ? { baseUrl: j.socrata.baseUrl, datasetId: j.socrata.arrests }
+            : { available: false },
+        ),
       ),
       runETL("311", () =>
-        run311ETL({ baseUrl: j.socrata!.baseUrl, datasetId: j.socrata!.requests311 }),
+        run311ETL(
+          j.socrata
+            ? { baseUrl: j.socrata.baseUrl, datasetId: j.socrata.requests311 }
+            : { available: false },
+        ),
       ),
     ]);
-    allResults.push(...socrataResults);
+    allResults.push(...openDataResults);
   }
 
-  // Local file ETLs (CFS, Campus, TJJD — always run, they gracefully handle missing files)
-  console.log("  --- Local Files (CFS, Campus, TJJD) ---");
+  // CFS is a public-records source file, held only for Dallas today.
+  // Campus reads the statewide TEA extract, filtered to the jurisdiction's
+  // county. TJJD reads either a 58.009 extract or the statewide county file.
+  console.log("  --- CFS, Campus, TJJD ---");
   const localResults = await Promise.all([
-    runETL("cfs", runCFSETL),
-    runETL("campus", runCampusETL),
-    runETL("tjjd", runTJJDETL),
+    runETL("cfs", () => runCFSETL({ available: j.cfsSource === "local-file" })),
+    runETL("campus", () => runCampusETL({ county: j.teaCounty })),
+    runETL("tjjd", () =>
+      runTJJDETL(
+        j.youthCourt?.kind === "tjjd-county"
+          ? { kind: "tjjd-county", county: j.youthCourt.county }
+          : { kind: "local-excel" },
+      ),
+    ),
   ]);
   allResults.push(...localResults);
 
@@ -114,15 +143,27 @@ async function refreshJurisdiction(j: JurisdictionConfig): Promise<ETLResult[]> 
 }
 
 async function main() {
+  // Optional jurisdiction filter, for running one jurisdiction during dev:
+  //   npx tsx scripts/refresh-data.ts tarrant
+  const only = process.argv.slice(2).map((a) => a.trim().toLowerCase()).filter(Boolean);
+  const targets =
+    only.length > 0 ? JURISDICTIONS.filter((j) => only.includes(j.id)) : JURISDICTIONS;
+
+  if (targets.length === 0) {
+    throw new Error(
+      `No jurisdictions matched ${only.join(", ")} — known: ${JURISDICTIONS.map((j) => j.id).join(", ")}`,
+    );
+  }
+
   console.log("=== Youth Safety Dashboards — Data Refresh ===");
   console.log(`  Timestamp: ${new Date().toISOString()}`);
-  console.log(`  Jurisdictions: ${JURISDICTIONS.map((j) => j.id).join(", ")}`);
+  console.log(`  Jurisdictions: ${targets.map((j) => j.id).join(", ")}`);
   console.log("");
 
   let criticalFailed = 0;
   let softFailed = 0;
 
-  for (const j of JURISDICTIONS) {
+  for (const j of targets) {
     console.log(`\n========== ${j.name} (${j.id}) ==========`);
     const results = await refreshJurisdiction(j);
 
@@ -137,7 +178,7 @@ async function main() {
       if (SOFT_FAIL_ETLS.has(r.name)) {
         softFailed++;
         // GitHub Actions warning annotation — visible without failing the run.
-        console.log(`::warning::[${j.id}] Socrata ETL "${r.name}" failed (${r.error}); serving last-good data.`);
+        console.log(`::warning::[${j.id}] Open-data ETL "${r.name}" failed (${r.error}); serving last-good data.`);
       } else {
         criticalFailed++;
       }
@@ -146,18 +187,18 @@ async function main() {
 
   if (softFailed > 0) {
     console.warn(
-      `\n${softFailed} Socrata ETL(s) failed — last-good data retained for those domains, other data published.`,
+      `\n${softFailed} open-data ETL(s) failed — last-good data retained for those domains, other data published.`,
     );
   }
 
   if (criticalFailed > 0) {
-    console.error(`\n${criticalFailed} critical (non-Socrata) ETL(s) failed!`);
+    console.error(`\n${criticalFailed} critical (local-source) ETL(s) failed!`);
     process.exit(1);
   }
 
   console.log(
     softFailed > 0
-      ? "\nRefresh completed with Socrata degradation (see warnings above)."
+      ? "\nRefresh completed with open-data degradation (see warnings above)."
       : "\nAll ETLs completed successfully.",
   );
 }

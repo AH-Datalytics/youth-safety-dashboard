@@ -1,8 +1,15 @@
 /**
- * TJJD Youth Court Referrals — wide-to-long unpivoted format.
- * Source: "Redacted Youth Justice Data.xlsx"
- *   - "TJJD Data" sheet: Category/Description rows × monthly columns → unpivot
- *   - "Zip Code" sheet: ZIP rows × year columns → unpivot, filter to Dallas-area
+ * TJJD Youth Court Referrals.
+ *
+ * Two sources produce this payload:
+ *   - A client-supplied Family Code 58.009 extract ("Redacted Youth Justice
+ *     Data.xlsx"): monthly, with age/disposition/gender/offense/race splits and
+ *     a ZIP sheet. Used for Dallas.
+ *   - TJJD's statewide county-level referral file on data.texas.gov: annual,
+ *     offense-type splits only, no ZIP. Used where no 58.009 extract exists.
+ *
+ * `granularity` and `totalCategory` let the UI render either shape without
+ * knowing which source it came from.
  */
 
 /** TJJD referral record (from main data sheet, unpivoted) */
@@ -38,6 +45,20 @@ export interface TJJDPayload {
   categories: string[];
   descriptions: string[];
   years: string[];
+  /**
+   * Time granularity of `records`. Annual sources set `mo` to 1 on every row,
+   * so the time axis must be labelled by year alone.
+   */
+  granularity?: "monthly" | "annual";
+  /**
+   * Name of the category that partitions referrals exactly once, used for
+   * totals and the time series. Every other category is a re-cut of the same
+   * referrals, so summing across categories would multiply-count.
+   * Defaults to "Gender" (the Dallas 58.009 shape).
+   */
+  totalCategory?: string;
+  /** Human-readable source label shown on the page. */
+  sourceLabel?: string;
   summary: {
     totalReferrals: number;
     totalZipReferrals: number;
