@@ -32,7 +32,11 @@ export default function DotMapInner({
       />
       {points.map((p, i) => {
         const color = p.category ? (colorMap[p.category] ?? defaultColor) : defaultColor;
-        const radius = Math.max(3, Math.min(12, Math.sqrt(p.count) * 1.5));
+        // Clamp before the sqrt: a negative count (TEA masks small-campus
+        // enrollment as -1) would make the radius NaN and Leaflet would emit
+        // an unparseable "a NaN,NaN" arc for the circle.
+        const scaled = Math.sqrt(Math.max(0, p.count)) * 1.5;
+        const radius = Number.isFinite(scaled) ? Math.max(3, Math.min(12, scaled)) : 3;
         return (
           <CircleMarker
             key={`${p.lat}-${p.lon}-${i}`}

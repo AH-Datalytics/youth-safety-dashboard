@@ -217,6 +217,8 @@ export default function UnifiedMapPage() {
         <ChartSkeleton />
       ) : (
         <DotMap
+          center={config.geo?.center}
+          zoom={config.geo?.zoom}
           points={mapPoints}
           colorMap={COLOR_MAP}
           title={`${mapPoints.reduce((s, p) => s + p.count, 0).toLocaleString()} incidents`}

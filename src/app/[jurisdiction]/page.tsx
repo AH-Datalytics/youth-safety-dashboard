@@ -17,6 +17,8 @@ interface CardSummary {
   ytdCount: number;
   ytdPctChange: number | null;
   monthlyData: Array<{ month: string; count: number }>;
+  /** Period the headline count covers, e.g. "Jan–Aug 2026". */
+  label?: string;
 }
 
 interface OverviewData {
@@ -107,6 +109,7 @@ export default function JurisdictionHomePage() {
             monthlyData={data?.requests311?.monthlyData ?? []}
             isLoading={isLoading}
             invertColor={true}
+            unavailable={(config.unavailableMeasures ?? []).includes("311")}
           />
         )}
         {config.domains.includes("youth-court") && (
@@ -117,7 +120,7 @@ export default function JurisdictionHomePage() {
             ytdPctChange={data?.youthCourt?.ytdPctChange ?? null}
             monthlyData={data?.youthCourt?.monthlyData ?? []}
             isLoading={isLoading}
-            valueLabel="Latest Year"
+            valueLabel={data?.youthCourt?.label ?? "Latest Year"}
           />
         )}
         {config.domains.includes("school-discipline") && (
