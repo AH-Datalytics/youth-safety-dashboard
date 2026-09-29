@@ -75,7 +75,10 @@ export default function AboutPage() {
         config.youthCourt?.kind === "tjjd-county"
           ? "Annual county-level referral counts with offense-type splits, FY2013–2021. " +
             "Coarser than the monthly, ZIP-level extract available for Dallas County."
-          : "Monthly TJJD referral data by category (age, offense, disposition, etc.).",
+          : "Monthly referral dispositions from a Family Code 58.009 data request, by age, " +
+            "gender, race/ethnicity, offense, and disposition, with the youth's residence ZIP " +
+            "by year. Calendar year is based on disposition date. TJJD suppresses counts " +
+            "under 5; the dashboard counts each suppressed cell as 1.",
     },
     {
       domain: "School Discipline",

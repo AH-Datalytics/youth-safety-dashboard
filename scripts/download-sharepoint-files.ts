@@ -28,9 +28,10 @@ const FILES: Array<[string, string]> = [
   [`${BASE}/CAMPUS_summary_22.csv`, "data/source/CAMPUS_summary_22.csv"],
   [`${BASE}/CAMPUS_summary_23.csv`, "data/source/CAMPUS_summary_23.csv"],
   [`${BASE}/CAMPUS_summary_24.csv`, "data/source/CAMPUS_summary_24.csv"],
-  [`${BASE}/Redacted Youth Justice Data.xlsx`, "data/source/Redacted Youth Justice Data.xlsx"],
   [`${BASE}/Directory2024.csv`, "data/source/Directory2024.csv"],
-  [TJJD_FILE_PATH, "data/source/Family Code 58.009 data request #41104.xlsx"],
+  // TJJD 58.009 referral-disposition request (Dallas + Tarrant). The path is a
+  // repo variable so a new request can be swapped in without a code change.
+  [TJJD_FILE_PATH, "data/source/tjjd-referrals.xlsx"],
   // Crosswalk files
   [`${BASE}/XWalk - NIBRS.xlsx`, "data/crosswalks/XWalk - NIBRS.xlsx"],
   [`${BASE}/XWalk - Discipline.xlsx`, "data/crosswalks/XWalk - Discipline.xlsx"],

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useTJJD, useFilteredTJJD } from "@/hooks/use-tjjd";
 import { useTJJDStore } from "@/stores/tjjd-store";
 import { DownloadButton } from "@/components/ui/download-button";
@@ -10,6 +10,7 @@ import { BrushBarChart } from "@/components/charts/brush-bar-chart";
 import { ChoroplethMap } from "@/components/charts/choropleth-map";
 import { ChartSkeleton } from "@/components/ui/loading-skeleton";
 import { cn } from "@/lib/utils";
+import { useJurisdiction } from "@/lib/jurisdiction-context";
 
 /**
  * Preferred tab order for the Dallas 58.009 shape. Categories present in the
@@ -32,6 +33,7 @@ export default function YouthCourtReferralsPage() {
   const { filteredData, rangeTotal, zipRecords, monthlyTimeSeries, metadata, isLoading } =
     useFilteredTJJD();
   const store = useTJJDStore();
+  const config = useJurisdiction();
 
   const granularity = metadata?.granularity ?? "monthly";
 
@@ -59,6 +61,17 @@ export default function YouthCourtReferralsPage() {
       .sort(([, a], [, b]) => b - a)
       .map(([key, count]) => ({ key, count }));
   }, [filteredData, store.category]);
+
+  // The store's default category comes from the Dallas 58.009 shape ("Age").
+  // A jurisdiction whose source has different cuts would otherwise render an
+  // empty breakdown titled with a category it doesn't publish, and no tab
+  // would appear active.
+  useEffect(() => {
+    if (categories.length === 0) return;
+    if (!store.category || !categories.includes(store.category)) {
+      store.setCategory(categories[0]);
+    }
+  }, [categories]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-6">
@@ -148,9 +161,11 @@ export default function YouthCourtReferralsPage() {
       )}
 
       {/* ZIP choropleth map — only sources with ZIP detail can render it */}
-      {!isLoading && zipRecords.length > 0 && (
+      {!isLoading && zipRecords.length > 0 && config.geo?.zcta && (
         <ChoroplethMap
           zipRecords={zipRecords}
+          geojsonUrl={config.geo.zcta}
+          center={config.geo.center}
           title="Court Referrals by ZIP Code"
         />
       )}
