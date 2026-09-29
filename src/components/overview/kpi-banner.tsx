@@ -14,6 +14,8 @@ interface KPIBannerProps {
   clearedOver18: BannerKPI | null;
   requests311: BannerKPI | null;
   isLoading?: boolean;
+  /** Measure keys the jurisdiction's sources cannot produce. */
+  unavailableMeasures?: readonly string[];
 }
 
 function KPIBlock({
@@ -22,12 +24,15 @@ function KPIBlock({
   pctChange,
   increaseIsBad,
   isLoading,
+  unavailable,
 }: {
   label: string;
   value: string;
   pctChange: number | null;
   increaseIsBad?: boolean;
   isLoading?: boolean;
+  /** The jurisdiction's source cannot produce this measure. */
+  unavailable?: boolean;
 }) {
   if (isLoading) {
     return (
@@ -35,6 +40,18 @@ function KPIBlock({
         <div className="h-3 w-16 bg-white/20 animate-pulse rounded" />
         <div className="h-7 w-12 bg-white/20 animate-pulse rounded" />
         <div className="h-3 w-20 bg-white/20 animate-pulse rounded" />
+      </div>
+    );
+  }
+
+  if (unavailable) {
+    return (
+      <div className="flex flex-col items-center gap-0.5 px-4 py-3">
+        <span className="text-xs text-white/60 uppercase tracking-wider font-medium">
+          {label}
+        </span>
+        <span className="text-2xl font-bold text-white/40">&mdash;</span>
+        <span className="text-xs text-white/50">Not published</span>
       </div>
     );
   }
@@ -78,7 +95,11 @@ export function KPIBanner({
   clearedOver18,
   requests311,
   isLoading,
+  unavailableMeasures = [],
 }: KPIBannerProps) {
+  const noClearance = unavailableMeasures.includes("youth-clearance");
+  const noArrests = unavailableMeasures.includes("arrests");
+  const no311 = unavailableMeasures.includes("311");
   return (
     <div className="bg-[#2C1A6B] rounded-lg mb-6 overflow-hidden">
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 divide-x divide-white/10">
@@ -95,6 +116,7 @@ export function KPIBanner({
           pctChange={arrests?.pctChange ?? null}
           increaseIsBad={true}
           isLoading={isLoading}
+          unavailable={noArrests}
         />
         <KPIBlock
           label="Arrests (17 & Under)"
@@ -102,6 +124,7 @@ export function KPIBanner({
           pctChange={clearedUnder17?.pctChange ?? null}
           increaseIsBad={true}
           isLoading={isLoading}
+          unavailable={noClearance}
         />
         <KPIBlock
           label="Arrests (18 & Older)"
@@ -109,6 +132,7 @@ export function KPIBanner({
           pctChange={clearedOver18?.pctChange ?? null}
           increaseIsBad={true}
           isLoading={isLoading}
+          unavailable={noClearance}
         />
         <KPIBlock
           label="311 Requests YTD"
@@ -116,6 +140,7 @@ export function KPIBanner({
           pctChange={requests311?.pctChange ?? null}
           increaseIsBad={false}
           isLoading={isLoading}
+          unavailable={no311}
         />
       </div>
     </div>

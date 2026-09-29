@@ -72,7 +72,8 @@ export default function SchoolDisciplineChartsPage() {
         lat: s.lat,
         lon: s.lon,
         category: cleanInstructionType(s.instructionType),
-        count: s.enrollment || 1,
+        // TEA masks enrollment for small campuses as -1; size those as unknown.
+        count: s.enrollment > 0 ? s.enrollment : 1,
         label: s.name,
       }));
   }, [filteredSchools]);
@@ -169,6 +170,8 @@ export default function SchoolDisciplineChartsPage() {
       {/* Dot Map */}
       {!isLoading && schoolPoints.length > 0 && (
         <DotMap
+          center={config.geo?.center}
+          zoom={config.geo?.zoom}
           points={schoolPoints}
           colorMap={INSTRUCTION_COLOR_MAP}
           defaultColor="#7C3AED"

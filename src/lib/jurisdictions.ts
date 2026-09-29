@@ -45,11 +45,91 @@ export interface JurisdictionConfig {
     requests311: string;
   };
 
+  /**
+   * ArcGIS Feature Service layers, for portals that aren't Socrata.
+   * Fort Worth retired its Socrata portal in favour of an ArcGIS Hub site.
+   */
+  arcgis?: {
+    /** Layer URL for crime/incident records (no trailing /query). */
+    incidents: string;
+    /** Field mapping from the layer's schema onto the incident payload. */
+    incidentFields: {
+      /** Reported datetime — ISO string or epoch ms. */
+      date: string;
+      /** NIBRS (or local) offense code. */
+      offenseCode: string;
+      /** Human-readable offense description. */
+      offenseDesc: string;
+      /** District/area field used for the district filter. */
+      district: string;
+      /** "(lat, lon)" string field used for map points. */
+      location: string;
+    };
+  };
+
+  /** TEA county name used to filter the statewide CAMPUS discipline extract. */
+  teaCounty?: string;
+
+  /**
+   * Set when a calls-for-service source file exists for this jurisdiction.
+   * The CFS source file is shared across the repo, so presence on disk can't
+   * distinguish jurisdictions — this flag has to be explicit.
+   */
+  cfsSource?: "local-file";
+
+  /** Where youth-court referral counts come from. */
+  youthCourt?:
+    | {
+        /**
+         * TJJD's response to a Family Code 58.009 data request
+         * (data/source/tjjd-referrals.xlsx). Monthly, six cuts, plus ZIP.
+         */
+        kind: "tjjd-request";
+        /** County as TJJD labels it in the workbook, e.g. "TARRANT". */
+        county: string;
+      }
+    | {
+        /** TJJD statewide county-level referral data on data.texas.gov. */
+        kind: "tjjd-county";
+        /** County name as spelled in the TJJD dataset, e.g. "TARRANT". */
+        county: string;
+      };
+
+  /**
+   * Page ids hidden for this jurisdiction — used where a domain is mostly
+   * available but one page's source dataset does not exist locally.
+   */
+  hiddenPages?: string[];
+
+  /**
+   * Measures this jurisdiction's sources cannot produce. Listed measures render
+   * as "not published" instead of zero, so a missing field is never mistaken
+   * for a real count of zero.
+   *
+   * - `youth-clearance`: the arrestee-age clearance breakdown, which requires a
+   *   clearance/disposition field on the offense records.
+   * - `arrests`, `311`: no such dataset is published for this jurisdiction.
+   */
+  unavailableMeasures?: Array<"youth-clearance" | "arrests" | "311">;
+
+  /**
+   * Per-domain notice rendered above a page whose source data isn't available
+   * for this jurisdiction yet. Keeps a scaffolded page honest rather than
+   * looking broken.
+   */
+  dataNotices?: Partial<Record<DomainId, string>>;
+
   /** Map defaults */
   geo?: {
     center: [number, number];
     zoom: number;
     bounds: [[number, number], [number, number]];
+    /**
+     * ZCTA boundaries for the youth-court ZIP choropleth, in /public. Built by
+     * `scripts/build-zcta-geojson.py`. ZIPs outside this file are dropped
+     * from the payload.
+     */
+    zcta?: string;
   };
 
   /** Earliest date in data */
@@ -179,8 +259,75 @@ export const JURISDICTIONS: JurisdictionConfig[] = [
         [32.55, -97.05],
         [33.05, -96.45],
       ],
+      zcta: "/dallas-zcta.geojson",
     },
     dataFloor: "2017-01-01",
+    teaCounty: "DALLAS COUNTY",
+    cfsSource: "local-file",
+    youthCourt: { kind: "tjjd-request", county: "DALLAS" },
+  },
+  {
+    id: "tarrant",
+    name: "Tarrant County",
+    shortName: "Tarrant",
+    org: "Lone Star Justice Alliance",
+    orgShort: "LSJA",
+    logo: "/logos/lsja-logo.png",
+    description: "Youth public safety data for Tarrant County",
+    colors: {
+      primary: "#2C1A6B",
+      primaryDark: "#1A0F40",
+      accent: "#7C3AED",
+      background: "#faf9f6",
+    },
+    domains: [
+      "offense-arrest",
+      "cfs",
+      "311",
+      "map",
+      "youth-court",
+      "school-discipline",
+    ],
+    // Fort Worth publishes no arrest dataset, so the Demographics page (which
+    // is entirely arrest-based) has nothing to render.
+    hiddenPages: ["arrests"],
+    // Fort Worth's crime layer has no clearance/disposition field, and the
+    // city publishes neither arrests nor 311 service requests.
+    unavailableMeasures: ["youth-clearance", "arrests", "311"],
+    dataNotices: {
+      cfs:
+        "Fort Worth does not publish a calls-for-service dataset. This page is " +
+        "scaffolded and will populate once a public-records request to Fort Worth " +
+        "PD is fulfilled.",
+      "311":
+        "Fort Worth does not publish MyFW/311 service requests as open data. " +
+        "This page is scaffolded; the closest available substitute is the city's " +
+        "Code Violations table.",
+    },
+    arcgis: {
+      incidents:
+        "https://services5.arcgis.com/3ddLCBXe1bRt7mzj/arcgis/rest/services/" +
+        "CFW_Open_Data_Police_Crime_Data_Table_view/FeatureServer/0",
+      incidentFields: {
+        date: "Reported_Date",
+        offenseCode: "Offense",
+        offenseDesc: "Offense_Desc",
+        district: "CouncilDistrict",
+        location: "Location_1",
+      },
+    },
+    geo: {
+      center: [32.7555, -97.3308],
+      zoom: 11,
+      bounds: [
+        [32.55, -97.6],
+        [33.0, -97.0],
+      ],
+      zcta: "/tarrant-zcta.geojson",
+    },
+    dataFloor: "2017-01-01",
+    teaCounty: "TARRANT COUNTY",
+    youthCourt: { kind: "tjjd-request", county: "TARRANT" },
   },
 ];
 
@@ -199,19 +346,32 @@ export function getJurisdictionOrThrow(slug: string): JurisdictionConfig {
 }
 
 /**
- * Build navigation sections for a jurisdiction, filtering to enabled domains.
+ * Build navigation sections for a jurisdiction, filtering to enabled domains
+ * and dropping any page listed in `hiddenPages`. A section whose every page is
+ * hidden is dropped entirely; a section that keeps some pages points at the
+ * first surviving one.
+ *
  * All hrefs are prefixed with /{jurisdictionId}.
  */
 export function getSections(config: JurisdictionConfig): Section[] {
+  const hidden = new Set(config.hiddenPages ?? []);
   const sections: Section[] = [];
+
   for (const domain of config.domains) {
     const defs = DOMAIN_SECTIONS[domain];
     if (!defs) continue;
     for (const def of defs) {
+      const pages = def.pages.filter((p) => !hidden.has(p.id));
+      if (pages.length === 0) continue;
+      // If the section's landing page was hidden, fall back to the first
+      // page that survived the filter.
+      const landing = def.pages.some((p) => p.href === def.href && !hidden.has(p.id))
+        ? def.href
+        : pages[0].href;
       sections.push({
         ...def,
-        href: `/${config.id}${def.href}`,
-        pages: def.pages.map((p) => ({
+        href: `/${config.id}${landing}`,
+        pages: pages.map((p) => ({
           ...p,
           href: `/${config.id}${p.href}`,
         })),
@@ -219,4 +379,9 @@ export function getSections(config: JurisdictionConfig): Section[] {
     }
   }
   return sections;
+}
+
+/** True when a page id is hidden for this jurisdiction. */
+export function isPageHidden(config: JurisdictionConfig, pageId: string): boolean {
+  return (config.hiddenPages ?? []).includes(pageId);
 }

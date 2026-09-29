@@ -18,7 +18,13 @@ export default function LandingPage() {
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {JURISDICTIONS.map((j) => (
+          {JURISDICTIONS.map((j) => {
+            // Domains carrying a data notice are scaffolded, not populated —
+            // counting them would overstate what the jurisdiction covers.
+            const populated = j.domains.filter(
+              (d) => !j.dataNotices?.[d],
+            ).length;
+            return (
             <Link
               key={j.id}
               href={`/${j.id}`}
@@ -36,7 +42,7 @@ export default function LandingPage() {
                   className="inline-block px-2 py-0.5 text-xs font-semibold rounded-full text-white"
                   style={{ backgroundColor: j.colors.primary }}
                 >
-                  {j.domains.length} domains
+                  {populated} domains
                 </span>
               </div>
               <h2 className="font-serif text-lg font-bold text-[#1a1a1a] group-hover:text-[#2C1A6B] transition-colors">
@@ -45,7 +51,8 @@ export default function LandingPage() {
               <p className="text-sm text-[#6b7280] mt-1">{j.org}</p>
               <p className="text-xs text-[#9ca3af] mt-2">{j.description}</p>
             </Link>
-          ))}
+            );
+          })}
         </div>
       </main>
 

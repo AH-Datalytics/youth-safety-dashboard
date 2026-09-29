@@ -12,6 +12,7 @@ import { DateRangeSlicer } from "@/components/filters/date-range-slicer";
 import { MultiSelect } from "@/components/filters/multi-select";
 import { KPICard } from "@/components/ui/kpi-card";
 import { KPIBannerSkeleton, ChartSkeleton } from "@/components/ui/loading-skeleton";
+import { DataNotice } from "@/components/ui/data-notice";
 
 /** Default date: Jan 1 of 2 years ago */
 function defaultDateFrom(): string {
@@ -74,6 +75,8 @@ export default function Requests311Page() {
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-4">
       <h1 className="font-serif text-lg md:text-xl font-bold">311 Requests — Code Compliance</h1>
+
+      <DataNotice domain="311" />
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-lg border border-border">

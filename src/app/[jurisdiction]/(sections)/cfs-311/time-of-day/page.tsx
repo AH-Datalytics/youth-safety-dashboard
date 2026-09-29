@@ -11,6 +11,7 @@ import { ChartSkeleton } from "@/components/ui/loading-skeleton";
 import { PageToggle } from "@/components/ui/page-toggle";
 import { useJurisdiction } from "@/lib/jurisdiction-context";
 import { getSections } from "@/lib/jurisdictions";
+import { DataNotice } from "@/components/ui/data-notice";
 
 /** Default date: Jan 1 of 2 years ago */
 function defaultDateFrom(): string {
@@ -46,6 +47,8 @@ export default function CFSTimeOfDayPage() {
         <h1 className="font-serif text-lg md:text-xl font-bold">CFS Time of Day</h1>
         <PageToggle pages={sectionPages} />
       </div>
+
+      <DataNotice domain="cfs" />
 
       <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-lg border border-border">
         <DateRangeSlicer

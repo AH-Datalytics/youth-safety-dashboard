@@ -1,13 +1,20 @@
 /**
- * One-time script: Batch geocode Dallas County schools via Census Geocoder API.
- * Reads Directory2024.csv, filters to Dallas County, geocodes addresses,
- * writes data/crosswalks/school-geocodes.json keyed by campus number.
+ * Batch geocode school addresses via the Census Geocoder API.
  *
- * Usage: npx tsx scripts/geocode-schools.ts
+ * Reads the statewide TEA Directory2024.csv, filters to one or more counties,
+ * geocodes the addresses, and MERGES the results into
+ * data/crosswalks/school-geocodes.json keyed by campus number. Merging matters:
+ * the file serves every jurisdiction, so geocoding one county must not drop
+ * another's coordinates.
+ *
+ * Usage:
+ *   npx tsx scripts/geocode-schools.ts                    # every registered county
+ *   npx tsx scripts/geocode-schools.ts "TARRANT COUNTY"   # one county
  */
 import fs from "fs";
 import path from "path";
 import Papa from "papaparse";
+import { JURISDICTIONS } from "../src/lib/jurisdictions";
 
 const DIRECTORY_PATH = path.join(process.cwd(), "data", "source", "Directory2024.csv");
 const OUTPUT_PATH = path.join(process.cwd(), "data", "crosswalks", "school-geocodes.json");
@@ -22,7 +29,7 @@ interface SchoolAddress {
   zip: string;
 }
 
-function loadDallasSchools(): SchoolAddress[] {
+function loadSchools(counties: Set<string>): SchoolAddress[] {
   if (!fs.existsSync(DIRECTORY_PATH)) {
     throw new Error(`Directory2024.csv not found at ${DIRECTORY_PATH}`);
   }
@@ -33,7 +40,7 @@ function loadDallasSchools(): SchoolAddress[] {
 
   for (const row of parsed.data as Record<string, string>[]) {
     const county = (row["County Name"] ?? "").trim().toUpperCase();
-    if (county !== "DALLAS COUNTY") continue;
+    if (!counties.has(county)) continue;
 
     const campusNumber = (row["School Number"] ?? "").replace(/'/g, "").trim();
     const street = (row["School Street Address"] ?? "").trim();
@@ -101,11 +108,31 @@ async function geocodeBatch(
 }
 
 async function main() {
-  console.log("[geocode] Loading Dallas County schools...");
-  const schools = loadDallasSchools();
+  // Counties come from the CLI, else from every registered jurisdiction.
+  const requested = process.argv.slice(2).map((a) => a.trim().toUpperCase()).filter(Boolean);
+  const counties = new Set(
+    requested.length > 0
+      ? requested
+      : JURISDICTIONS.map((j) => j.teaCounty)
+          .filter((c): c is string => Boolean(c))
+          .map((c) => c.toUpperCase()),
+  );
+
+  if (counties.size === 0) {
+    throw new Error("No counties to geocode — pass one, or set teaCounty on a jurisdiction.");
+  }
+
+  console.log(`[geocode] Counties: ${Array.from(counties).join(", ")}`);
+  const schools = loadSchools(counties);
   console.log(`[geocode] Found ${schools.length} schools to geocode`);
 
-  const allResults: Record<string, { lat: number; lon: number }> = {};
+  // Merge into any existing coordinates rather than replacing the file.
+  const allResults: Record<string, { lat: number; lon: number }> =
+    fs.existsSync(OUTPUT_PATH)
+      ? JSON.parse(fs.readFileSync(OUTPUT_PATH, "utf-8"))
+      : {};
+  const existingCount = Object.keys(allResults).length;
+  console.log(`[geocode] Existing coordinates on file: ${existingCount}`);
   let matched = 0;
 
   // Process in batches
@@ -131,7 +158,10 @@ async function main() {
   console.log(`[geocode] Matched ${matched}/${schools.length} (${matchRate}%)`);
 
   fs.writeFileSync(OUTPUT_PATH, JSON.stringify(allResults, null, 2));
-  console.log(`[geocode] Wrote ${OUTPUT_PATH}`);
+  console.log(
+    `[geocode] Wrote ${OUTPUT_PATH} — ${Object.keys(allResults).length} total ` +
+      `coordinates (was ${existingCount})`,
+  );
 }
 
 main().catch((err) => {

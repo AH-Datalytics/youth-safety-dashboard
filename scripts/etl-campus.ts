@@ -13,7 +13,7 @@
  *   - VALUE column name varies by file (YR18, YR19, ... YR24)
  *   - -999 sentinel → null
  *   - Join to Directory2024.csv on CAMPUS number for school metadata
- *   - Filter to County Name = "DALLAS COUNTY"
+ *   - Filter to County Name = the jurisdiction's TEA county (e.g. "DALLAS COUNTY")
  */
 import fs from "fs";
 import path from "path";
@@ -25,6 +25,7 @@ const CAMPUS_DIR = path.join(process.cwd(), "data", "source");
 const DIRECTORY_PATH = path.join(process.cwd(), "data", "source", "Directory2024.csv");
 const GEOCODE_PATH = path.join(process.cwd(), "data", "crosswalks", "school-geocodes.json");
 const SKIP_ROWS = 6;
+const DEFAULT_COUNTY = "DALLAS COUNTY";
 
 /** School year mapping by filename suffix */
 const SY_MAP: Record<string, string> = {
@@ -60,7 +61,7 @@ function loadGeocodes(): Record<string, { lat: number; lon: number }> {
   return data;
 }
 
-function loadDirectory(): Map<number, DirectoryEntry> {
+function loadDirectory(county: string): Map<number, DirectoryEntry> {
   const map = new Map<number, DirectoryEntry>();
   if (!fs.existsSync(DIRECTORY_PATH)) {
     console.warn("[campus-etl] Directory2024.csv not found");
@@ -99,8 +100,8 @@ function loadDirectory(): Map<number, DirectoryEntry> {
   }
 
   console.log(`[campus-etl] Loaded ${map.size} schools from Directory`);
-  const dallasCount = Array.from(map.values()).filter(d => d.countyName === "DALLAS COUNTY").length;
-  console.log(`[campus-etl] Dallas County schools: ${dallasCount}`);
+  const inCounty = Array.from(map.values()).filter((d) => d.countyName === county).length;
+  console.log(`[campus-etl] ${county} schools: ${inCounty}`);
   return map;
 }
 
@@ -129,7 +130,15 @@ function parseCSVLine(line: string): string[] {
   return result;
 }
 
-export async function runCampusETL(): Promise<CampusPayload> {
+export interface CampusETLConfig {
+  /** TEA county name to filter the statewide extract to, e.g. "TARRANT COUNTY". */
+  county?: string;
+}
+
+export async function runCampusETL(config?: CampusETLConfig): Promise<CampusPayload> {
+  const county = (config?.county ?? DEFAULT_COUNTY).toUpperCase();
+  console.log(`[campus-etl] Filtering statewide TEA extract to ${county}`);
+
   const csvFiles = fs.readdirSync(CAMPUS_DIR).filter(
     (f) => f.toLowerCase().startsWith("campus") && f.endsWith(".csv"),
   );
@@ -143,13 +152,13 @@ export async function runCampusETL(): Promise<CampusPayload> {
 
   // Load crosswalks
   const disciplineXwalk = loadDisciplineCrosswalk();
-  const directory = loadDirectory();
+  const directory = loadDirectory(county);
 
-  // Build set of Dallas County campus numbers
-  const dallasCampuses = new Set<number>();
+  // Build set of in-county campus numbers
+  const countyCampuses = new Set<number>();
   for (const [num, entry] of directory) {
-    if (entry.countyName === "DALLAS COUNTY") {
-      dallasCampuses.add(num);
+    if (entry.countyName === county) {
+      countyCampuses.add(num);
     }
   }
 
@@ -223,8 +232,8 @@ export async function runCampusETL(): Promise<CampusPayload> {
         continue;
       }
 
-      // Filter to Dallas County only
-      if (dallasCampuses.size > 0 && !dallasCampuses.has(campusNumber)) continue;
+      // Filter to the jurisdiction's county only
+      if (countyCampuses.size > 0 && !countyCampuses.has(campusNumber)) continue;
 
       // Parse value
       const valueStr = values[valueColIdx] ?? "";

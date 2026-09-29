@@ -16,6 +16,8 @@ interface DomainCardProps {
   invertColor?: boolean;
   /** Label override below the value */
   valueLabel?: string;
+  /** No source published for this jurisdiction — show a dash, not a count. */
+  unavailable?: boolean;
 }
 
 export function DomainCard({
@@ -27,6 +29,7 @@ export function DomainCard({
   isLoading,
   invertColor,
   valueLabel,
+  unavailable,
 }: DomainCardProps) {
   if (isLoading) {
     return (
@@ -57,15 +60,17 @@ export function DomainCard({
 
       <div className="mt-2 flex items-baseline gap-3">
         <span className="text-3xl font-bold tabular-nums text-primary">
-          {ytdCount !== null ? ytdCount.toLocaleString() : "—"}
+          {unavailable || ytdCount === null ? "—" : ytdCount.toLocaleString()}
         </span>
-        {ytdPctChange !== null && (
+        {!unavailable && ytdPctChange !== null && (
           <span className={`text-sm font-semibold ${colorClass}`}>
             {arrow}{formatPctChange(ytdPctChange)} vs last year
           </span>
         )}
       </div>
-      <p className="text-xs text-[#999] mt-0.5">{valueLabel || "Year-to-Date"}</p>
+      <p className="text-xs text-[#999] mt-0.5">
+        {unavailable ? "Not published" : valueLabel || "Year-to-Date"}
+      </p>
 
       <div className="mt-3">
         <MiniBarChart data={monthlyData} />

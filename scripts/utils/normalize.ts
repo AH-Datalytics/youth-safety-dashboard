@@ -108,10 +108,20 @@ const MISC_CRIME_AGAINST = new Set([
   "PERSON, PROPERTY, OR SOCIETY",
 ]);
 
+/**
+ * Crime-against labels whose correct casing titleCase would mangle
+ * ("Not a Crime" → "Not A Crime"). These come from the NIBRS crosswalk, which
+ * only the ArcGIS-sourced jurisdictions read.
+ */
+const CRIME_AGAINST_LABELS: Record<string, string> = {
+  "NOT A CRIME": "Not a Crime",
+};
+
 export function normalizeCrimeAgainst(raw: string): string {
   if (!raw || raw === "Unknown") return "All Other Offenses";
   const upper = raw.trim().toUpperCase();
   if (MISC_CRIME_AGAINST.has(upper)) return "All Other Offenses";
+  if (CRIME_AGAINST_LABELS[upper]) return CRIME_AGAINST_LABELS[upper];
   return titleCase(raw.trim());
 }
 

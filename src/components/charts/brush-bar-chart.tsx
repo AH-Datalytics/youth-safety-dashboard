@@ -33,6 +33,11 @@ function formatMonthLong(v: string) {
   return `${MONTH_NAMES[parseInt(m) - 1]} ${y}`;
 }
 
+/** Annual sources carry a placeholder month, so only the year is meaningful. */
+function formatYear(v: string) {
+  return String(v).split("-")[0];
+}
+
 interface BrushBarChartProps {
   data: { month: string; count: number }[];
   /** Current brush start index (null = full range) */
@@ -43,6 +48,10 @@ interface BrushBarChartProps {
   onRangeChange?: (start: number, end: number) => void;
   color?: string;
   height?: number;
+  /** "annual" labels the axis by year only. Default "monthly". */
+  granularity?: "monthly" | "annual";
+  /** Tooltip value label. Default "Referrals". */
+  valueLabel?: string;
 }
 
 export function BrushBarChart({
@@ -52,7 +61,11 @@ export function BrushBarChart({
   onRangeChange,
   color = COLORS.primary,
   height = 280,
+  granularity = "monthly",
+  valueLabel = "Referrals",
 }: BrushBarChartProps) {
+  const tickFmt = granularity === "annual" ? formatYear : formatMonthShort;
+  const labelFmt = granularity === "annual" ? formatYear : formatMonthLong;
   return (
     <div className="border border-border rounded-lg p-4 bg-white">
       <ResponsiveContainer width="100%" height={height}>
@@ -63,7 +76,7 @@ export function BrushBarChart({
             tick={{ fontSize: 10, fill: "#999" }}
             tickLine={false}
             axisLine={false}
-            tickFormatter={formatMonthShort}
+            tickFormatter={tickFmt}
             interval="preserveStartEnd"
           />
           <YAxis
@@ -79,8 +92,8 @@ export function BrushBarChart({
               borderRadius: 4,
               boxShadow: "none",
             }}
-            labelFormatter={(v) => formatMonthLong(String(v))}
-            formatter={(value) => [Number(value).toLocaleString(), "Referrals"]}
+            labelFormatter={(v) => labelFmt(String(v))}
+            formatter={(value) => [Number(value).toLocaleString(), valueLabel]}
           />
           <Bar dataKey="count" fill={color} radius={[2, 2, 0, 0]} />
           <Brush
@@ -88,7 +101,7 @@ export function BrushBarChart({
             height={30}
             stroke={COLORS.accent}
             fill="#f5f3ff"
-            tickFormatter={formatMonthShort}
+            tickFormatter={tickFmt}
             startIndex={startIndex ?? 0}
             endIndex={endIndex ?? data.length - 1}
             onChange={(range) => {

@@ -9,6 +9,7 @@ import { DateRangeSlicer } from "@/components/filters/date-range-slicer";
 import { TreeFilter, type TreeNode } from "@/components/filters/tree-filter";
 import { ChartSkeleton } from "@/components/ui/loading-skeleton";
 import { cn } from "@/lib/utils";
+import { useJurisdiction } from "@/lib/jurisdiction-context";
 
 /** Color map for all layers */
 const COLOR_MAP: Record<string, string> = {
@@ -23,15 +24,19 @@ const COLOR_MAP: Record<string, string> = {
   "311 Request": "#dc2626",
 };
 
-const CASE_STATUS_TABS = [
-  "All",
+/**
+ * Preferred order for case-status tabs. Only statuses present in the
+ * jurisdiction's payload are rendered, so a source with no clearance field
+ * doesn't show empty clearance tabs.
+ */
+const CASE_STATUS_ORDER = [
   "Cleared (Arrestee Age 17 or Under)",
   "Cleared (Arrestee 18 or Older)",
   "Open",
   "Closed",
   "Suspended",
   "Unknown",
-] as const;
+];
 
 /** Default: last 30 days */
 function defaultDateFrom(): string {
@@ -48,6 +53,10 @@ export default function UnifiedMapPage() {
   const { points: incidentPoints, nibrsTree, metadata: incMeta, isLoading: incLoading } = useFilteredIncidents();
   const { points: r311Points, isLoading: r311Loading } = useFiltered311();
   const offenseStore = useOffenseStore();
+  const config = useJurisdiction();
+
+  // A jurisdiction with no published 311 source gets no 311 layer to toggle.
+  const has311 = config.domains.includes("311") && !config.dataNotices?.["311"];
 
   // Layer toggles
   const [showOffenses, setShowOffenses] = useState(true);
@@ -119,6 +128,15 @@ export default function UnifiedMapPage() {
     return pts;
   }, [showOffenses, show311, incidentPoints, r311Points, caseStatusFilter, dateFrom, dateTo]);
 
+  const caseStatusTabs = useMemo(() => {
+    const present = new Set(incMeta?.caseStatuses ?? []);
+    const ordered = CASE_STATUS_ORDER.filter((s) => present.has(s));
+    const extra = Array.from(present)
+      .filter((s) => !CASE_STATUS_ORDER.includes(s))
+      .sort();
+    return ["All", ...ordered, ...extra];
+  }, [incMeta?.caseStatuses]);
+
   const isLoading = incLoading || r311Loading;
 
   return (
@@ -139,17 +157,19 @@ export default function UnifiedMapPage() {
         >
           Offenses
         </button>
-        <button
-          onClick={() => setShow311((v) => !v)}
-          className={cn(
-            "px-3 py-1.5 text-xs rounded border transition-colors",
-            show311
-              ? "bg-primary text-white border-primary"
-              : "bg-white text-foreground border-border hover:bg-muted",
-          )}
-        >
-          311 Requests
-        </button>
+        {has311 && (
+          <button
+            onClick={() => setShow311((v) => !v)}
+            className={cn(
+              "px-3 py-1.5 text-xs rounded border transition-colors",
+              show311
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-foreground border-border hover:bg-muted",
+            )}
+          >
+            311 Requests
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -173,9 +193,9 @@ export default function UnifiedMapPage() {
       </div>
 
       {/* Case Status Tabs (only when offenses visible) */}
-      {showOffenses && (
+      {showOffenses && caseStatusTabs.length > 2 && (
         <div className="flex flex-wrap gap-1">
-          {CASE_STATUS_TABS.map((tab) => (
+          {caseStatusTabs.map((tab) => (
             <button
               key={tab}
               onClick={() => setCaseStatusFilter(tab)}
@@ -197,6 +217,8 @@ export default function UnifiedMapPage() {
         <ChartSkeleton />
       ) : (
         <DotMap
+          center={config.geo?.center}
+          zoom={config.geo?.zoom}
           points={mapPoints}
           colorMap={COLOR_MAP}
           title={`${mapPoints.reduce((s, p) => s + p.count, 0).toLocaleString()} incidents`}
