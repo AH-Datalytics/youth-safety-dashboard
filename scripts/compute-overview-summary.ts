@@ -150,7 +150,7 @@ type TJJDData = {
 };
 
 type CampusData = {
-  records?: Array<{ sy: string; v: number }>;
+  records?: Array<{ sy: string; se: string; tp: string; v: number }>;
   summary?: { totalRecords: number };
 };
 
@@ -299,9 +299,21 @@ export function computeOverviewSummary(dir?: string): OverviewSummary {
   // School Discipline (Campus — school year based, value field is now `v`)
   let schoolDisciplineCard: CardSummary | null = null;
   if (campusData?.records && campusData.records.length > 0) {
-    // Map to computeSYComparison format
-    const mapped = campusData.records.map(r => ({ sy: r.sy, c: r.v }));
-    schoolDisciplineCard = computeSYComparison(mapped);
+    // The CAMPUS extract mixes measures (enrollment, student counts, actions,
+    // and several demographic re-cuts of the same actions), so summing every
+    // row inflates the count many times over. Count disciplinary incidents
+    // only: the "Incident Type" reason rows, which is the "Incident Reasons"
+    // subtotal on the School Discipline page.
+    const mapped = campusData.records
+      .filter(r => r.se === "W-REASON INCIDENT COUNTS" && r.tp === "Incident Type")
+      .map(r => ({ sy: r.sy, c: r.v }));
+    const card = computeSYComparison(mapped);
+    if (card) {
+      const latest = card.monthlyData[card.monthlyData.length - 1]?.month ?? "";
+      // "2023-2024" → "2023–24 School Year"
+      const m = /^(\d{4})-\d{2}(\d{2})$/.exec(latest);
+      schoolDisciplineCard = { ...card, label: m ? `${m[1]}–${m[2]} School Year` : latest };
+    }
   }
 
   return {
