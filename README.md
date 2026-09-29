@@ -13,9 +13,12 @@ The app publishes aggregate and map-ready data from public sources and public-re
   dispositions (a Family Code 58.009 request covering Dallas and Tarrant).
 - Public education data: campus discipline and enrollment summaries from TEA.
 
-Coverage differs by jurisdiction — not every domain is published everywhere. Pages without
-a source for a given jurisdiction state that on the page rather than rendering empty
-charts.
+Coverage differs by jurisdiction — not every domain is published everywhere. A
+jurisdiction's nav and home page show only the sections it has data for. Calls for service
+in Dallas come from an annual public-records request, and those pages state the date the
+data runs through.
+
+Live at https://youth-safety-dashboards.vercel.app/dallas and `/tarrant`.
 
 Raw source files are not committed to this repository. They are downloaded during the scheduled refresh workflow and transformed into generated files under `data/generated/`.
 

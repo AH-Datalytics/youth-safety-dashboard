@@ -8,10 +8,25 @@ The app is a Next.js dashboard with automated ETL that publishes public and publ
 Registered jurisdictions live in `src/lib/jurisdictions.ts`. Adding one means adding a
 `JurisdictionConfig` there — routes, nav, branding, and ETL dispatch all derive from it.
 
+Live: **https://youth-safety-dashboards.vercel.app** (note the plural; the singular
+`youth-safety-dashboard.vercel.app` does not exist). Vercel deploys on every push to
+`master`, including the nightly bot data commits.
+
 | Jurisdiction | Route | Offense source | Notes |
 |---|---|---|---|
 | Dallas County | `/dallas` | Dallas Open Data (Socrata) | All 7 domains populated |
-| Tarrant County | `/tarrant` | Fort Worth Open Data (ArcGIS) | No arrests, CFS, or 311 published |
+| Tarrant County | `/tarrant` (live 2026-09-28) | Fort Worth Open Data (ArcGIS) | No CFS or 311 section; no arrests or clearance. Offense data covers Fort Worth city only |
+
+**Tarrant differences, and where they come from:**
+- CFS and 311 are left out of `domains`, so they have no nav tab, home card, download or
+  About entry, and their URLs 404.
+- The offense section reads "Offense", not "Offense & Arrest" (`offenseSectionLabel`,
+  driven by `unavailableMeasures: ["arrests"]`).
+- The home KPI banner drops measures listed in `unavailableMeasures` and shows the Youth
+  Court and School Discipline headlines instead (`src/components/overview/kpi-banner.tsx`).
+  Dallas keeps its five KPIs.
+- Offense map dots are colored by NIBRS crime-against (`MAP_DOT_COLORS`), because Fort
+  Worth publishes no case status, so every record is "Unknown". Dallas colors by case status.
 
 See `docs/plans/2026-09-08-tarrant-county-data-availability.md` for exactly what is and
 isn't available per jurisdiction, and what it would take to close each gap.
@@ -58,6 +73,32 @@ A domain left out of `domains` has no nav tab, and its pages 404 server-side via
 
 A domain with no source for a jurisdiction emits an empty payload rather than failing, so
 the routed page renders its notice instead of a fetch error.
+
+### Maps
+
+- **Basemap:** Esri World Light Gray Canvas, base plus labels (`src/components/charts/basemap.tsx`).
+  It needs no API key. CARTO's basemaps were dropped on 2026-09-29 because they now serve
+  "API KEY REQUIRED" watermark tiles to keyless requests. An HTTP 200 PNG does not prove a
+  tile is good, so look at the image.
+- **Map cards use `isolation: isolate`.** Without it, Leaflet's panes (z-index 400–1000)
+  cover page dropdowns (z-50).
+- **Offense Type filter on the map** filters dots by offense group or crime-against. Points
+  carry no NIBRS code, so the map's tree stops at group level.
+- **Offense point coordinates:** Dallas's location text is `(lat, lon)` and GeoJSON is
+  `[lon, lat]`. `extract_lonlat` in `prepare-incidents-parquet.py` (the path CI uses)
+  orders the pair by sign (western hemisphere: longitude negative). A swap here leaves the
+  map empty without any error, which happened until 2026-09-29.
+
+### Overview summary measures
+
+- **Youth court card/KPI:** the latest (partial) year compared with the same months of the
+  prior year, labelled e.g. "Jan–Aug 2026".
+- **School discipline card/KPI:** disciplinary incidents only, meaning CAMPUS section
+  `W-REASON INCIDENT COUNTS` with type `Incident Type`, labelled with the school year. This
+  matches the "Incident Reasons" subtotal on the School Discipline page. **Never sum every
+  CAMPUS row.** The extract mixes enrollment, student counts, actions and demographic
+  re-cuts of the same actions, and summing them all inflated the card about 20 times until
+  2026-09-29.
 
 ### ArcGIS extraction notes
 

@@ -24,6 +24,21 @@ portal documentation.
 Four of seven domains populate from public sources. Three do not exist as open data for
 any Tarrant County jurisdiction.
 
+### Launch state (2026-09-29)
+
+Tarrant went live at `/tarrant` on 2026-09-28 and was finished on 2026-09-29:
+
+- **Shown:** Offense (renamed from "Offense & Arrest"), Map, Youth Court (TJJD #42717,
+  monthly, with a ZIP choropleth) and School Discipline.
+- **Removed rather than scaffolded:** CFS and 311 are out of the nav, home cards,
+  downloads and About page, and their URLs 404. Arrests and the clearance KPIs are out of
+  the home banner, which shows Youth Court and School Discipline in their place.
+- **Map:** dots are colored by crime-against, because there is no case status to color by.
+
+The "scaffolded page with a notice" approach described below was the 2026-09-08 plan and
+was not kept. Bring CFS or 311 back by adding the domain to Tarrant's `domains` once a
+source exists.
+
 ---
 
 ## The portal change that matters most
