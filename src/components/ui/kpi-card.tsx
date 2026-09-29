@@ -11,15 +11,30 @@ interface KPICardProps {
   loading?: boolean;
   /** Decimal places for value display (default: 0) */
   decimals?: number;
+  /**
+   * The jurisdiction's source cannot produce this measure. Renders a dash
+   * rather than 0, which would read as a real count.
+   */
+  unavailable?: boolean;
 }
 
-export function KPICard({ label, value, priorValue, pctChange, loading, decimals = 0 }: KPICardProps) {
+export function KPICard({ label, value, priorValue, pctChange, loading, decimals = 0, unavailable }: KPICardProps) {
   if (loading) {
     return (
       <div className="p-4 animate-pulse">
         <div className="h-3 bg-white/20 rounded w-20 mb-2" />
         <div className="h-8 bg-white/20 rounded w-24 mb-1" />
         <div className="h-3 bg-white/20 rounded w-16" />
+      </div>
+    );
+  }
+
+  if (unavailable) {
+    return (
+      <div className="p-4">
+        <p className="text-xs text-white/60 uppercase tracking-wider font-sans mb-1">{label}</p>
+        <p className="text-2xl md:text-3xl font-bold font-serif text-white/40">&mdash;</p>
+        <p className="text-xs text-white/50 mt-1">Not published</p>
       </div>
     );
   }

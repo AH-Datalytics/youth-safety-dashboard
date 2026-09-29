@@ -1,14 +1,21 @@
 # Youth Safety Dashboard
 
-Public dashboard for Dallas County youth public-safety data, built for Lone Star Justice Alliance.
+Public dashboard for Texas youth public-safety data, built for Lone Star Justice Alliance.
+Currently covers Dallas County (`/dallas`) and Tarrant County (`/tarrant`).
 
 The app publishes aggregate and map-ready data from public sources and public-records datasets. Generated dashboard payloads are committed as compressed JSON so the deployed app can serve data without requiring runtime access to the original source files.
 
 ## Data Sources
 
-- Dallas Open Data: police incidents, arrests, and 311 service requests.
-- Public-records source files: calls for service and youth-court referral data.
-- Public education data: campus discipline and enrollment summaries.
+- Municipal open data: police incidents, and where published, arrests and 311 service
+  requests. Dallas publishes via Socrata; Fort Worth via ArcGIS Feature Services.
+- Public-records source files: calls for service, and TJJD youth-court referral
+  dispositions (a Family Code 58.009 request covering Dallas and Tarrant).
+- Public education data: campus discipline and enrollment summaries from TEA.
+
+Coverage differs by jurisdiction — not every domain is published everywhere. Pages without
+a source for a given jurisdiction state that on the page rather than rendering empty
+charts.
 
 Raw source files are not committed to this repository. They are downloaded during the scheduled refresh workflow and transformed into generated files under `data/generated/`.
 

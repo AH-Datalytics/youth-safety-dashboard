@@ -89,7 +89,20 @@ interface AggBucket {
   tsCount: number; // number of valid time spent values
 }
 
-export async function runCFSETL(): Promise<CFSPayload> {
+export interface CFSETLConfig {
+  /**
+   * False when the jurisdiction has no calls-for-service source file. The page
+   * is still routed and rendered, so the ETL emits an empty payload.
+   */
+  available?: boolean;
+}
+
+export async function runCFSETL(config?: CFSETLConfig): Promise<CFSPayload> {
+  if (config?.available === false) {
+    console.log("[cfs-etl] No CFS source for this jurisdiction — emitting empty payload");
+    return emptyPayload();
+  }
+
   // Load crosswalks
   const problemXwalk = loadProblemCrosswalk();
   const dispXwalk = loadDispositionCrosswalk();

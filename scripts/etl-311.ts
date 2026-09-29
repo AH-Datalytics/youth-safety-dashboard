@@ -18,6 +18,11 @@ const DATA_FLOOR = "2020-01-01T00:00:00";
 export interface ETL311Config {
   baseUrl?: string;
   datasetId?: string;
+  /**
+   * False when the jurisdiction publishes no 311 dataset. The page is still
+   * routed and rendered, so the ETL emits an empty payload rather than failing.
+   */
+  available?: boolean;
 }
 
 interface Socrata311 {
@@ -37,6 +42,23 @@ function cleanRequestType(raw: string | undefined): string {
   if (!raw) return "Unknown";
   const parts = raw.split(" - ");
   return parts[0].trim();
+}
+
+/** Empty payload for jurisdictions with no 311 source. */
+function emptyPayload(): Request311Payload {
+  return {
+    lastUpdated: new Date().toISOString(),
+    dataThrough: "",
+    records: [],
+    points: [],
+    requestTypes: [],
+    departments: [],
+    statuses: [],
+    priorityGroups: [],
+    districts: [],
+    zipCodes: [],
+    summary: { total: 0, ytdCurrent: 0, ytdPrior: 0, pctChange: 0 },
+  };
 }
 
 /** Parse lat/lon from Socrata lat_location field (handles multiple formats) */
@@ -74,6 +96,10 @@ function parseLatLon(raw: unknown): { lat: number; lon: number } | null {
 }
 
 export async function run311ETL(config?: ETL311Config): Promise<Request311Payload> {
+  if (config?.available === false) {
+    console.log("[311-etl] No 311 source for this jurisdiction — emitting empty payload");
+    return emptyPayload();
+  }
   const endpoint = config?.baseUrl && config?.datasetId
     ? `${config.baseUrl}/${config.datasetId}.json`
     : DEFAULT_ENDPOINT;

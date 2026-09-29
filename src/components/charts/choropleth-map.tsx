@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import type { FeatureCollection } from "geojson";
 import type { TJJDZipRecord } from "@/lib/types";
 
-/** Dallas center coordinates */
+/** Fallback only — callers should pass the jurisdiction's configured center. */
 const DALLAS_CENTER: [number, number] = [32.78, -96.8];
 const DEFAULT_ZOOM = 10;
 
@@ -15,21 +15,27 @@ interface ChoroplethMapProps {
   zipRecords: TJJDZipRecord[];
   title?: string;
   height?: number;
+  /** Map center [lat, lon]. Defaults to Dallas. */
+  center?: [number, number];
+  /** ZCTA boundaries in /public — the jurisdiction's `geo.zcta`. */
+  geojsonUrl: string;
 }
 
 export function ChoroplethMap({
   zipRecords,
   title,
   height = 450,
+  center,
+  geojsonUrl,
 }: ChoroplethMapProps) {
   const [geojson, setGeojson] = useState<FeatureCollection | null>(null);
 
   useEffect(() => {
-    fetch("/dallas-zcta.geojson")
+    fetch(geojsonUrl)
       .then((res) => res.json())
       .then((data) => setGeojson(data))
       .catch(() => {});
-  }, []);
+  }, [geojsonUrl]);
 
   const zipCounts = useMemo(() => {
     const map = new Map<string, number>();
@@ -60,7 +66,7 @@ export function ChoroplethMap({
           <MapInner
             geojson={geojson}
             zipCounts={zipCounts}
-            center={DALLAS_CENTER}
+            center={center ?? DALLAS_CENTER}
             zoom={DEFAULT_ZOOM}
           />
         ) : (
