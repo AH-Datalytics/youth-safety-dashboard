@@ -12,7 +12,7 @@ import { runArrestsETL } from "./etl-arrests";
 import { run311ETL } from "./etl-311";
 import { runCFSETL } from "./etl-cfs";
 import { runCampusETL } from "./etl-campus";
-import { runTJJDETL } from "./etl-tjjd";
+import { emptyTJJDPayload, loadZctaZips, runTJJDETL } from "./etl-tjjd";
 import { computeOverviewSummary } from "./compute-overview-summary";
 
 interface ETLResult {
@@ -113,17 +113,19 @@ async function refreshJurisdiction(j: JurisdictionConfig): Promise<ETLResult[]> 
 
   // CFS is a public-records source file, held only for Dallas today.
   // Campus reads the statewide TEA extract, filtered to the jurisdiction's
-  // county. TJJD reads either a 58.009 extract or the statewide county file.
+  // county. TJJD reads the 58.009 request workbook or the statewide county file.
   console.log("  --- CFS, Campus, TJJD ---");
   const localResults = await Promise.all([
     runETL("cfs", () => runCFSETL({ available: j.cfsSource === "local-file" })),
     runETL("campus", () => runCampusETL({ county: j.teaCounty })),
     runETL("tjjd", () =>
-      runTJJDETL(
-        j.youthCourt?.kind === "tjjd-county"
-          ? { kind: "tjjd-county", county: j.youthCourt.county }
-          : { kind: "local-excel" },
-      ),
+      j.youthCourt
+        ? runTJJDETL({
+            kind: j.youthCourt.kind,
+            county: j.youthCourt.county,
+            zipAllowList: loadZctaZips(j.geo?.zcta),
+          })
+        : Promise.resolve(emptyTJJDPayload()),
     ),
   ]);
   allResults.push(...localResults);

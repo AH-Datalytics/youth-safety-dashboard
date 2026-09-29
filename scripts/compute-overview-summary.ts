@@ -17,6 +17,8 @@ interface CardSummary {
   ytdCount: number;
   ytdPctChange: number | null;
   monthlyData: Array<{ month: string; count: number }>;
+  /** Period the headline count covers, e.g. "Jan–Aug 2026". */
+  label?: string;
 }
 
 interface BannerKPI {
@@ -143,6 +145,7 @@ type TJJDData = {
   records?: Array<{ cat: string; desc: string; yr: string; mo: number; v: number }>;
   /** Category that partitions referrals exactly once. Defaults to "Gender". */
   totalCategory?: string;
+  granularity?: "monthly" | "annual";
   summary?: { totalReferrals: number };
 };
 
@@ -259,21 +262,37 @@ export function computeOverviewSummary(dir?: string): OverviewSummary {
     // only the designated total category may be summed. Summing all of them
     // multiplies the count by the number of category cuts.
     const totalCategory = tjjdData.totalCategory ?? "Gender";
+    const totals = tjjdData.records.filter(r => r.cat === totalCategory);
     const byYear = new Map<string, number>();
-    for (const r of tjjdData.records) {
-      if (r.cat !== totalCategory) continue;
-      byYear.set(r.yr, (byYear.get(r.yr) || 0) + r.v);
-    }
+    for (const r of totals) byYear.set(r.yr, (byYear.get(r.yr) || 0) + r.v);
     const sortedYears = Array.from(byYear.keys()).sort();
     const latest = sortedYears[sortedYears.length - 1];
     const prior = sortedYears.length >= 2 ? sortedYears[sortedYears.length - 2] : null;
-    const latestCount = byYear.get(latest) || 0;
-    const priorCount = prior ? (byYear.get(prior) || 0) : 0;
+
+    // The latest year is usually partial (TJJD fulfils requests mid-year), so
+    // compare it against the same months of the prior year, not the full year.
+    // Annual sources set mo=1 on every row, which makes this a no-op for them.
+    const monthly = tjjdData.granularity !== "annual";
+    const lastMonth = monthly
+      ? Math.max(...totals.filter(r => r.yr === latest).map(r => r.mo))
+      : 12;
+    const sumThrough = (yr: string | null) =>
+      totals
+        .filter(r => r.yr === yr && (!monthly || r.mo <= lastMonth))
+        .reduce((s, r) => s + r.v, 0);
+    const latestCount = sumThrough(latest);
+    const priorCount = sumThrough(prior);
+    const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
     youthCourtCard = {
       ytdCount: latestCount,
       ytdPctChange: priorCount > 0 ? percentChange(latestCount, priorCount) : null,
       monthlyData: sortedYears.map(yr => ({ month: yr, count: byYear.get(yr) || 0 })),
+      label: !monthly
+        ? `Latest Year (${latest})`
+        : lastMonth === 12
+          ? `${latest}`
+          : `Jan–${MONTH_ABBR[lastMonth - 1]} ${latest}`,
     };
   }
 

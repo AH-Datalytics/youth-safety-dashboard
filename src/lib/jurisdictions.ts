@@ -80,8 +80,13 @@ export interface JurisdictionConfig {
   /** Where youth-court referral counts come from. */
   youthCourt?:
     | {
-        /** Client-supplied Family Code 58.009 extract in data/source/. */
-        kind: "local-excel";
+        /**
+         * TJJD's response to a Family Code 58.009 data request
+         * (data/source/tjjd-referrals.xlsx). Monthly, six cuts, plus ZIP.
+         */
+        kind: "tjjd-request";
+        /** County as TJJD labels it in the workbook, e.g. "TARRANT". */
+        county: string;
       }
     | {
         /** TJJD statewide county-level referral data on data.texas.gov. */
@@ -103,8 +108,9 @@ export interface JurisdictionConfig {
    *
    * - `youth-clearance`: the arrestee-age clearance breakdown, which requires a
    *   clearance/disposition field on the offense records.
+   * - `arrests`, `311`: no such dataset is published for this jurisdiction.
    */
-  unavailableMeasures?: Array<"youth-clearance">;
+  unavailableMeasures?: Array<"youth-clearance" | "arrests" | "311">;
 
   /**
    * Per-domain notice rendered above a page whose source data isn't available
@@ -118,6 +124,12 @@ export interface JurisdictionConfig {
     center: [number, number];
     zoom: number;
     bounds: [[number, number], [number, number]];
+    /**
+     * ZCTA boundaries for the youth-court ZIP choropleth, in /public. Built by
+     * `scripts/build-zcta-geojson.py`. ZIPs outside this file are dropped
+     * from the payload.
+     */
+    zcta?: string;
   };
 
   /** Earliest date in data */
@@ -247,11 +259,12 @@ export const JURISDICTIONS: JurisdictionConfig[] = [
         [32.55, -97.05],
         [33.05, -96.45],
       ],
+      zcta: "/dallas-zcta.geojson",
     },
     dataFloor: "2017-01-01",
     teaCounty: "DALLAS COUNTY",
     cfsSource: "local-file",
-    youthCourt: { kind: "local-excel" },
+    youthCourt: { kind: "tjjd-request", county: "DALLAS" },
   },
   {
     id: "tarrant",
@@ -278,8 +291,9 @@ export const JURISDICTIONS: JurisdictionConfig[] = [
     // Fort Worth publishes no arrest dataset, so the Demographics page (which
     // is entirely arrest-based) has nothing to render.
     hiddenPages: ["arrests"],
-    // Fort Worth's crime layer has no clearance/disposition field.
-    unavailableMeasures: ["youth-clearance"],
+    // Fort Worth's crime layer has no clearance/disposition field, and the
+    // city publishes neither arrests nor 311 service requests.
+    unavailableMeasures: ["youth-clearance", "arrests", "311"],
     dataNotices: {
       cfs:
         "Fort Worth does not publish a calls-for-service dataset. This page is " +
@@ -309,10 +323,11 @@ export const JURISDICTIONS: JurisdictionConfig[] = [
         [32.55, -97.6],
         [33.0, -97.0],
       ],
+      zcta: "/tarrant-zcta.geojson",
     },
     dataFloor: "2017-01-01",
     teaCounty: "TARRANT COUNTY",
-    youthCourt: { kind: "tjjd-county", county: "TARRANT" },
+    youthCourt: { kind: "tjjd-request", county: "TARRANT" },
   },
 ];
 
