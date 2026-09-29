@@ -1,12 +1,13 @@
 "use client";
 
 import { useJurisdiction } from "@/lib/jurisdiction-context";
+import { hasDomain } from "@/lib/jurisdictions";
 
 export default function AboutPage() {
   const config = useJurisdiction();
 
   const socrataBase = config.socrata?.baseUrl;
-  const hasNotice = (domain: "cfs" | "311") => Boolean(config.dataNotices?.[domain]);
+  const hasNotice = (domain: "cfs" | "311") => !hasDomain(config, domain);
 
   const dataSources = [
     // Offenses come from Socrata (Dallas) or an ArcGIS Feature Service (Fort Worth).
@@ -40,7 +41,7 @@ export default function AboutPage() {
           },
         ]
       : []),
-    ...(config.socrata
+    ...(config.socrata && !hasNotice("311")
       ? [
           {
             domain: "311 Service Requests",

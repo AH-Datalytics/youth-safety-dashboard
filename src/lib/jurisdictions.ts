@@ -119,6 +119,13 @@ export interface JurisdictionConfig {
    */
   dataNotices?: Partial<Record<DomainId, string>>;
 
+  /**
+   * Per-domain note for a source that refreshes rarely (e.g. an annual
+   * public-records request). Rendered above the page with the payload's
+   * `dataThrough` date, so readers know how current the figures are.
+   */
+  dataCurrency?: Partial<Record<DomainId, string>>;
+
   /** Map defaults */
   geo?: {
     center: [number, number];
@@ -264,6 +271,11 @@ export const JURISDICTIONS: JurisdictionConfig[] = [
     dataFloor: "2017-01-01",
     teaCounty: "DALLAS COUNTY",
     cfsSource: "local-file",
+    dataCurrency: {
+      cfs:
+        "Calls for service come from a public-records request to Dallas PD that is " +
+        "filed once a year, so this page updates annually rather than daily.",
+    },
     youthCourt: { kind: "tjjd-request", county: "DALLAS" },
   },
   {
@@ -280,30 +292,15 @@ export const JURISDICTIONS: JurisdictionConfig[] = [
       accent: "#7C3AED",
       background: "#faf9f6",
     },
-    domains: [
-      "offense-arrest",
-      "cfs",
-      "311",
-      "map",
-      "youth-court",
-      "school-discipline",
-    ],
+    // Fort Worth publishes no calls-for-service or 311 dataset, so those
+    // sections are left out of the nav and their pages 404.
+    domains: ["offense-arrest", "map", "youth-court", "school-discipline"],
     // Fort Worth publishes no arrest dataset, so the Demographics page (which
     // is entirely arrest-based) has nothing to render.
     hiddenPages: ["arrests"],
     // Fort Worth's crime layer has no clearance/disposition field, and the
     // city publishes neither arrests nor 311 service requests.
     unavailableMeasures: ["youth-clearance", "arrests", "311"],
-    dataNotices: {
-      cfs:
-        "Fort Worth does not publish a calls-for-service dataset. This page is " +
-        "scaffolded and will populate once a public-records request to Fort Worth " +
-        "PD is fulfilled.",
-      "311":
-        "Fort Worth does not publish MyFW/311 service requests as open data. " +
-        "This page is scaffolded; the closest available substitute is the city's " +
-        "Code Violations table.",
-    },
     arcgis: {
       incidents:
         "https://services5.arcgis.com/3ddLCBXe1bRt7mzj/arcgis/rest/services/" +
@@ -379,6 +376,11 @@ export function getSections(config: JurisdictionConfig): Section[] {
     }
   }
   return sections;
+}
+
+/** True when the jurisdiction has a populated source for this domain. */
+export function hasDomain(config: JurisdictionConfig, domain: DomainId): boolean {
+  return config.domains.includes(domain) && !config.dataNotices?.[domain];
 }
 
 /** True when a page id is hidden for this jurisdiction. */

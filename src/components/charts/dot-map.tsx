@@ -56,7 +56,7 @@ export function DotMap({
   }, [points, colorMap]);
 
   return (
-    <div className="border border-border rounded-lg bg-white overflow-hidden">
+    <div className="isolate border border-border rounded-lg bg-white overflow-hidden">
       {title && (
         <div className="px-4 pt-3 pb-2 flex items-center justify-between">
           <h3 className="font-serif font-bold text-sm">{title}</h3>

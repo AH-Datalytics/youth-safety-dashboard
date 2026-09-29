@@ -10,6 +10,7 @@ import { TreeFilter, type TreeNode } from "@/components/filters/tree-filter";
 import { ChartSkeleton } from "@/components/ui/loading-skeleton";
 import { cn } from "@/lib/utils";
 import { useJurisdiction } from "@/lib/jurisdiction-context";
+import { MAP_DOT_COLORS } from "@/lib/constants";
 
 /** Color map for all layers */
 const COLOR_MAP: Record<string, string> = {
@@ -22,6 +23,17 @@ const COLOR_MAP: Record<string, string> = {
   Unknown: "#9ca3af",
   // 311
   "311 Request": "#dc2626",
+};
+
+/**
+ * Colors for sources with no case status (Fort Worth publishes no clearance or
+ * disposition field, so every record is "Unknown"). Dots are colored by NIBRS
+ * crime-against instead, using the spec'd offense-map palette.
+ */
+const CRIME_AGAINST_COLOR_MAP: Record<string, string> = {
+  ...MAP_DOT_COLORS,
+  "All Other Offenses": "#9ca3af",
+  "Not a Crime": "#9ca3af",
 };
 
 /**
@@ -81,14 +93,31 @@ export default function UnifiedMapPage() {
         label: ca,
         children: groups
           .sort((a, b) => a.group.localeCompare(b.group))
-          .map((og) => ({
-            label: og.group,
-            children: og.codes.map((code) => ({
-              label: code.description,
-            })),
-          })),
+          .map((og) => ({ label: og.group })),
       }));
   }, [nibrsTree]);
+
+  // Map points carry the offense group only. These resolve a group to its
+  // crime-against, and a code (selected on the offense pages, which share the
+  // filter store) to its group.
+  const { groupToCrimeAgainst, codeToGroup } = useMemo(() => {
+    const g2ca = new Map<string, string>();
+    const c2g = new Map<string, string>();
+    for (const node of nibrsTree ?? []) {
+      if (!g2ca.has(node.offenseGroup)) g2ca.set(node.offenseGroup, node.crimeAgainst);
+      for (const code of node.nibrsCodes) c2g.set(code.description, node.offenseGroup);
+    }
+    return { groupToCrimeAgainst: g2ca, codeToGroup: c2g };
+  }, [nibrsTree]);
+
+  // No case status in the source → color by crime-against, drop status tabs.
+  const hasCaseStatus = (incMeta?.caseStatuses ?? []).some((s) => s !== "Unknown");
+
+  const selectedLabels = offenseStore.nibrsCodes;
+  const selectedOffenses = useMemo(
+    () => new Set(selectedLabels.map((l) => codeToGroup.get(l) ?? l)),
+    [selectedLabels, codeToGroup],
+  );
 
   // Build combined map points
   const mapPoints: DotMapPoint[] = useMemo(() => {
@@ -100,10 +129,16 @@ export default function UnifiedMapPage() {
         if (dateFrom && p.d < dateFrom) continue;
         if (dateTo && p.d > dateTo) continue;
         if (caseStatusFilter !== "All" && p.cs !== caseStatusFilter) continue;
+        if (
+          selectedOffenses.size > 0 &&
+          !selectedOffenses.has(p.ca) &&
+          !selectedOffenses.has(groupToCrimeAgainst.get(p.ca) ?? "")
+        )
+          continue;
         pts.push({
           lat: p.lat,
           lon: p.lon,
-          category: p.cs,
+          category: hasCaseStatus ? p.cs : (groupToCrimeAgainst.get(p.ca) ?? "All Other Offenses"),
           count: p.c,
           label: p.ca,
         });
@@ -126,7 +161,18 @@ export default function UnifiedMapPage() {
     }
 
     return pts;
-  }, [showOffenses, show311, incidentPoints, r311Points, caseStatusFilter, dateFrom, dateTo]);
+  }, [
+    showOffenses,
+    show311,
+    incidentPoints,
+    r311Points,
+    caseStatusFilter,
+    dateFrom,
+    dateTo,
+    selectedOffenses,
+    hasCaseStatus,
+    groupToCrimeAgainst,
+  ]);
 
   const caseStatusTabs = useMemo(() => {
     const present = new Set(incMeta?.caseStatuses ?? []);
@@ -193,7 +239,7 @@ export default function UnifiedMapPage() {
       </div>
 
       {/* Case Status Tabs (only when offenses visible) */}
-      {showOffenses && caseStatusTabs.length > 2 && (
+      {showOffenses && hasCaseStatus && caseStatusTabs.length > 2 && (
         <div className="flex flex-wrap gap-1">
           {caseStatusTabs.map((tab) => (
             <button
@@ -220,7 +266,7 @@ export default function UnifiedMapPage() {
           center={config.geo?.center}
           zoom={config.geo?.zoom}
           points={mapPoints}
-          colorMap={COLOR_MAP}
+          colorMap={hasCaseStatus ? COLOR_MAP : { ...CRIME_AGAINST_COLOR_MAP, "311 Request": COLOR_MAP["311 Request"] }}
           title={`${mapPoints.reduce((s, p) => s + p.count, 0).toLocaleString()} incidents`}
           height={600}
         />
