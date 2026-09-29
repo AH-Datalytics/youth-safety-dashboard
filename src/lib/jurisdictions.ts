@@ -367,6 +367,7 @@ export function getSections(config: JurisdictionConfig): Section[] {
         : pages[0].href;
       sections.push({
         ...def,
+        label: def.id === "offense-arrest" ? offenseSectionLabel(config) : def.label,
         href: `/${config.id}${landing}`,
         pages: pages.map((p) => ({
           ...p,
@@ -376,6 +377,14 @@ export function getSections(config: JurisdictionConfig): Section[] {
     }
   }
   return sections;
+}
+
+/**
+ * "Offense & Arrest", or just "Offense" where no arrest data is published
+ * (Tarrant) — the section has no arrest content there.
+ */
+export function offenseSectionLabel(config: JurisdictionConfig): string {
+  return config.unavailableMeasures?.includes("arrests") ? "Offense" : "Offense & Arrest";
 }
 
 /** True when the jurisdiction has a populated source for this domain. */

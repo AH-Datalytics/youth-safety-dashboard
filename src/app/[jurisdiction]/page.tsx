@@ -5,6 +5,7 @@ import { useJurisdiction } from "@/lib/jurisdiction-context";
 import { useApiUrl } from "@/hooks/use-api-url";
 import { KPIBanner } from "@/components/overview/kpi-banner";
 import { DomainCard } from "@/components/overview/domain-card";
+import { offenseSectionLabel } from "@/lib/jurisdictions";
 
 // ---- Types ----
 
@@ -94,7 +95,7 @@ export default function JurisdictionHomePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {config.domains.includes("offense-arrest") && (
           <DomainCard
-            title="Offense & Arrest"
+            title={offenseSectionLabel(config)}
             href={`${prefix}/offense-arrest/overview`}
             ytdCount={data?.offenseArrest?.ytdCount ?? null}
             ytdPctChange={data?.offenseArrest?.ytdPctChange ?? null}
