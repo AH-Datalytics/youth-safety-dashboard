@@ -9,8 +9,8 @@ The app publishes aggregate and map-ready data from public sources and public-re
 
 - Municipal open data: police incidents, and where published, arrests and 311 service
   requests. Dallas publishes via Socrata; Fort Worth via ArcGIS Feature Services.
-- State open data: TJJD county-level juvenile referral counts.
-- Public-records source files: calls for service and detailed youth-court referral data.
+- Public-records source files: calls for service, and TJJD youth-court referral
+  dispositions (a Family Code 58.009 request covering Dallas and Tarrant).
 - Public education data: campus discipline and enrollment summaries from TEA.
 
 Coverage differs by jurisdiction — not every domain is published everywhere. Pages without

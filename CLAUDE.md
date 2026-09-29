@@ -11,7 +11,7 @@ Registered jurisdictions live in `src/lib/jurisdictions.ts`. Adding one means ad
 | Jurisdiction | Route | Offense source | Notes |
 |---|---|---|---|
 | Dallas County | `/dallas` | Dallas Open Data (Socrata) | All 7 domains populated |
-| Tarrant County | `/tarrant` | Fort Worth Open Data (ArcGIS) | No arrests, CFS, or 311 published; youth court is annual only |
+| Tarrant County | `/tarrant` | Fort Worth Open Data (ArcGIS) | No arrests, CFS, or 311 published |
 
 See `docs/plans/2026-09-08-tarrant-county-data-availability.md` for exactly what is and
 isn't available per jurisdiction, and what it would take to close each gap.
@@ -47,7 +47,8 @@ isn't available per jurisdiction, and what it would take to close each gap.
 | `socrata` | Incidents/arrests/311 pull from a Socrata portal |
 | `arcgis` | Incidents pull from an ArcGIS Feature Service instead (`scripts/utils/arcgis-fetch.ts`) |
 | `teaCounty` | County the statewide TEA CAMPUS extract is filtered to |
-| `youthCourt` | `local-excel` (58.009 extract) or `tjjd-county` (data.texas.gov statewide file) |
+| `youthCourt` | `tjjd-request` (58.009 request workbook, per county) or `tjjd-county` (data.texas.gov statewide file, annual) |
+| `geo.zcta` | ZCTA GeoJSON in `public/` for the ZIP choropleth; also the ZIP allow-list for TJJD records |
 | `hiddenPages` | Page ids dropped from nav; the page itself 404s |
 | `dataNotices` | Per-domain banner explaining why a scaffolded page is empty |
 
@@ -74,6 +75,16 @@ cut of the same referrals. **Summing across categories multiplies the count** by
 number of cuts. The payload's `totalCategory` names the one partition that may be summed;
 `granularity` tells the UI whether the time axis is monthly or annual.
 
+### TJJD referral workbook
+
+`data/source/tjjd-referrals.xlsx` is downloaded from the OneDrive path in the
+`SHAREPOINT_TJJD_FILE_PATH` repo variable (currently request #42717, CY2020 through Aug
+2026, both counties). A new TJJD request is swapped in by changing that variable only.
+The parser reads TJJD's formatted report layout directly — county and group header bands
+above a label row — so a new request in the same layout needs no code change. `" < 5"`
+cells count as 1, matching the original Dallas extract. For a new county, build its
+boundaries with `python scripts/build-zcta-geojson.py <county GEOID> <slug>`.
+
 ## Data Domains
 
 | Domain | Source Type | ETL Script | API Path |
@@ -83,7 +94,7 @@ number of cuts. The payload's `totalCategory` names the one partition that may b
 | 311 | Open data, where published | `scripts/etl-311.ts` | `/api/{jurisdiction}/311` |
 | CFS | Public-records source file | `scripts/etl-cfs.ts` | `/api/{jurisdiction}/cfs` |
 | Campus | Public education data files | `scripts/etl-campus.ts` | `/api/{jurisdiction}/campus` |
-| TJJD | 58.009 extract, or statewide county file | `scripts/etl-tjjd.ts` | `/api/{jurisdiction}/tjjd` |
+| TJJD | 58.009 request workbook, or statewide county file | `scripts/etl-tjjd.ts` | `/api/{jurisdiction}/tjjd` |
 | Overview | Computed summary | `scripts/compute-overview-summary.ts` | `/api/{jurisdiction}/overview-summary` |
 
 ## Local Development
