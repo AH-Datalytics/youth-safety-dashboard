@@ -36,3 +36,46 @@ export function DataNotice({ domain }: DataNoticeProps) {
     </div>
   );
 }
+
+interface DataCurrencyNoticeProps {
+  domain: DomainId;
+  /** Last date in the payload, YYYY-MM-DD. */
+  dataThrough?: string;
+}
+
+/** "2025-09-15" → "September 15, 2025", without a timezone shift. */
+function formatDate(iso: string): string {
+  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+/**
+ * States how current a rarely-refreshed source is — e.g. calls for service
+ * from an annual public-records request. Renders nothing unless the
+ * jurisdiction defines `dataCurrency` for the domain and the date is known.
+ */
+export function DataCurrencyNotice({ domain, dataThrough }: DataCurrencyNoticeProps) {
+  const config = useJurisdiction();
+  const message = config.dataCurrency?.[domain];
+  if (!message || !dataThrough) return null;
+
+  return (
+    <div className="flex gap-3 rounded-lg border border-[#e0d9f5] bg-[#f5f3ff] p-4">
+      <Info
+        className="h-4 w-4 shrink-0 mt-0.5 text-primary"
+        aria-hidden="true"
+      />
+      <div className="text-sm leading-relaxed text-[#4b4361]">
+        <span className="font-semibold text-primary">
+          Data through {formatDate(dataThrough)}.
+        </span>{" "}
+        {message}
+      </div>
+    </div>
+  );
+}

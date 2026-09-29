@@ -51,6 +51,10 @@ isn't available per jurisdiction, and what it would take to close each gap.
 | `geo.zcta` | ZCTA GeoJSON in `public/` for the ZIP choropleth; also the ZIP allow-list for TJJD records |
 | `hiddenPages` | Page ids dropped from nav; the page itself 404s |
 | `dataNotices` | Per-domain banner explaining why a scaffolded page is empty |
+| `dataCurrency` | Per-domain "Data through <date>" banner for rarely refreshed sources (Dallas CFS: annual records request) |
+
+A domain left out of `domains` has no nav tab, and its pages 404 server-side via
+`src/lib/require-domain.tsx` (Tarrant has no CFS or 311).
 
 A domain with no source for a jurisdiction emits an empty payload rather than failing, so
 the routed page renders its notice instead of a fetch error.

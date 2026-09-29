@@ -17,7 +17,7 @@ import { KPIBannerSkeleton, ChartSkeleton } from "@/components/ui/loading-skelet
 import { PageToggle } from "@/components/ui/page-toggle";
 import { useJurisdiction } from "@/lib/jurisdiction-context";
 import { getSections } from "@/lib/jurisdictions";
-import { DataNotice } from "@/components/ui/data-notice";
+import { DataNotice, DataCurrencyNotice } from "@/components/ui/data-notice";
 
 /** Default date: Jan 1 of 2 years ago */
 function defaultDateFrom(): string {
@@ -76,6 +76,7 @@ export default function CFSOverviewPage() {
       </div>
 
       <DataNotice domain="cfs" />
+      <DataCurrencyNotice domain="cfs" dataThrough={metadata?.dataThrough} />
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-lg border border-border">
@@ -138,11 +139,6 @@ export default function CFSOverviewPage() {
           decimals={1}
         />
       </div>
-      {metadata?.dataThrough && (
-        <p className="text-xs text-muted-foreground -mt-2">
-          Data through {metadata.dataThrough}
-        </p>
-      )}
 
       {/* Monthly bar chart */}
       <MonthlyBarChart data={monthly} title="# of CFS by Year and Month" />

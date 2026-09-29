@@ -49,8 +49,20 @@ def pick_col(candidates: list[str], columns: list[str]) -> str | None:
     return None
 
 
+def _as_lonlat(a: float, b: float) -> tuple[float, float]:
+    """Order a coordinate pair as (lon, lat), whichever order it arrived in.
+
+    Dallas's location text is "(lat, lon)" while GeoJSON is [lon, lat]. Every
+    jurisdiction here is in the western hemisphere, so longitude is the
+    negative value and latitude the positive one.
+    """
+    if a > 0 and b < 0:
+        return b, a
+    return a, b
+
+
 def extract_lonlat(location: str) -> tuple[float | None, float | None]:
-    """Extract longitude and latitude from various geo formats."""
+    """Extract (longitude, latitude) from various geo formats."""
     if not location or pd.isna(location):
         return None, None
 
@@ -61,18 +73,18 @@ def extract_lonlat(location: str) -> tuple[float | None, float | None]:
         nums = re.findall(r"-?\d+\.?\d*", loc)
         if len(nums) >= 2:
             try:
-                return float(nums[0]), float(nums[1])
+                return _as_lonlat(float(nums[0]), float(nums[1]))
             except ValueError:
                 pass
 
-    # POINT (lon lat) or (lon, lat) or (lon lat)
+    # POINT (lon lat), or "address (lat, lon)" as Dallas writes it
     m = re.search(r"\(([^)]*)\)", loc)
     if m:
         inside = m.group(1).replace(",", " ")
         parts = inside.split()
         if len(parts) >= 2:
             try:
-                return float(parts[0]), float(parts[1])
+                return _as_lonlat(float(parts[0]), float(parts[1]))
             except ValueError:
                 pass
 

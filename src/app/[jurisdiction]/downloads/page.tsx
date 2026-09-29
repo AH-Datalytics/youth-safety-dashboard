@@ -10,6 +10,7 @@ import { use311 } from "@/hooks/use-311";
 import { useTJJD } from "@/hooks/use-tjjd";
 import { useCampus } from "@/hooks/use-campus";
 import { DOWNLOAD_DOMAINS, type DomainDownloadInfo } from "@/config/download-columns";
+import { hasDomain } from "@/lib/jurisdictions";
 import { downloadData, type DownloadFormat } from "@/lib/download";
 
 type PayloadMap = Record<string, { records?: Record<string, any>[]; lastUpdated?: string } | undefined>;
@@ -71,7 +72,16 @@ function DomainCard({
 }
 
 export default function DownloadsPage() {
-  const { id: jurisdiction } = useJurisdiction();
+  const config = useJurisdiction();
+  const jurisdiction = config.id;
+
+  // Only datasets this jurisdiction actually publishes.
+  const available = DOWNLOAD_DOMAINS.filter((info) => {
+    if (info.domainId === "cfs") return hasDomain(config, "cfs");
+    if (info.domainId === "311") return hasDomain(config, "311");
+    if (info.domainId === "arrests") return !config.unavailableMeasures?.includes("arrests");
+    return true;
+  });
 
   // All 6 hooks called unconditionally at top level (Rules of Hooks)
   const incidents = useIncidents();
@@ -100,7 +110,7 @@ export default function DownloadsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {DOWNLOAD_DOMAINS.map((info) => {
+        {available.map((info) => {
           const payload = payloads[info.domainId];
           return (
             <DomainCard
