@@ -47,6 +47,14 @@ export function DotMap({
 }: DotMapProps) {
   const totalPoints = useMemo(() => points.reduce((s, p) => s + p.count, 0), [points]);
 
+  // Only legend entries that actually appear in the data. The colour map is a
+  // superset covering every jurisdiction, so an unfiltered legend would
+  // advertise categories this jurisdiction's source never emits.
+  const legend = useMemo(() => {
+    const present = new Set(points.map((p) => p.category).filter(Boolean));
+    return Object.entries(colorMap).filter(([cat]) => present.has(cat));
+  }, [points, colorMap]);
+
   return (
     <div className="border border-border rounded-lg bg-white overflow-hidden">
       {title && (
@@ -66,9 +74,9 @@ export function DotMap({
           zoom={zoom}
         />
       </div>
-      {Object.keys(colorMap).length > 0 && (
+      {legend.length > 0 && (
         <div className="px-4 py-2 flex flex-wrap gap-3 border-t border-border">
-          {Object.entries(colorMap).map(([cat, color]) => (
+          {legend.map(([cat, color]) => (
             <div key={cat} className="flex items-center gap-1.5 text-xs">
               <span
                 className="w-2.5 h-2.5 rounded-full shrink-0"

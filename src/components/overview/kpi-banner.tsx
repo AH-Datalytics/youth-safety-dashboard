@@ -98,6 +98,8 @@ export function KPIBanner({
   unavailableMeasures = [],
 }: KPIBannerProps) {
   const noClearance = unavailableMeasures.includes("youth-clearance");
+  const noArrests = unavailableMeasures.includes("arrests");
+  const no311 = unavailableMeasures.includes("311");
   return (
     <div className="bg-[#2C1A6B] rounded-lg mb-6 overflow-hidden">
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 divide-x divide-white/10">
@@ -114,6 +116,7 @@ export function KPIBanner({
           pctChange={arrests?.pctChange ?? null}
           increaseIsBad={true}
           isLoading={isLoading}
+          unavailable={noArrests}
         />
         <KPIBlock
           label="Arrests (17 & Under)"
@@ -137,6 +140,7 @@ export function KPIBanner({
           pctChange={requests311?.pctChange ?? null}
           increaseIsBad={false}
           isLoading={isLoading}
+          unavailable={no311}
         />
       </div>
     </div>
