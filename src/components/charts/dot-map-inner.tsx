@@ -1,6 +1,7 @@
 "use client";
 
-import { MapContainer, TileLayer, CircleMarker, Tooltip } from "react-leaflet";
+import { MapContainer, CircleMarker, Tooltip } from "react-leaflet";
+import { Basemap } from "./basemap";
 import "leaflet/dist/leaflet.css";
 import type { DotMapPoint } from "./dot-map";
 
@@ -26,10 +27,7 @@ export default function DotMapInner({
       style={{ height: "100%", width: "100%" }}
       scrollWheelZoom
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-      />
+      <Basemap />
       {points.map((p, i) => {
         const color = p.category ? (colorMap[p.category] ?? defaultColor) : defaultColor;
         // Clamp before the sqrt: a negative count (TEA masks small-campus
