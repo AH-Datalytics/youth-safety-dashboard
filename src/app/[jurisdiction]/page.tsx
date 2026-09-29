@@ -84,6 +84,8 @@ export default function JurisdictionHomePage() {
         clearedUnder17={data?.banner?.clearedUnder17 ?? null}
         clearedOver18={data?.banner?.clearedOver18 ?? null}
         requests311={data?.banner?.requests311 ?? null}
+        youthCourt={data?.youthCourt ?? null}
+        schoolDiscipline={data?.schoolDiscipline ?? null}
         isLoading={isLoading}
         unavailableMeasures={config.unavailableMeasures ?? []}
       />
@@ -131,7 +133,7 @@ export default function JurisdictionHomePage() {
             ytdPctChange={data?.schoolDiscipline?.ytdPctChange ?? null}
             monthlyData={data?.schoolDiscipline?.monthlyData ?? []}
             isLoading={isLoading}
-            valueLabel="Latest School Year"
+            valueLabel={data?.schoolDiscipline?.label ?? "Latest School Year"}
           />
         )}
       </div>
