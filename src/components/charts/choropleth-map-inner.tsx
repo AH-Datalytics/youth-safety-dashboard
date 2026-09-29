@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useCallback } from "react";
-import { MapContainer, TileLayer, GeoJSON, Tooltip } from "react-leaflet";
+import { MapContainer, GeoJSON, Tooltip } from "react-leaflet";
+import { Basemap } from "./basemap";
 import "leaflet/dist/leaflet.css";
 import type { Feature, FeatureCollection } from "geojson";
 import type { Layer, PathOptions } from "leaflet";
@@ -86,10 +87,7 @@ export default function ChoroplethMapInner({
       style={{ height: "100%", width: "100%" }}
       scrollWheelZoom
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-      />
+      <Basemap />
       <GeoJSON
         key={geoKey}
         data={geojson}
