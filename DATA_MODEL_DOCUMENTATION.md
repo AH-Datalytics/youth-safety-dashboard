@@ -351,6 +351,12 @@ School Year, CAMPUS, HEADING NAME, VALUE, School Name, Instruction Type, Magnet 
 
 ---
 
+> **Web app note (2026-09-28):** this section documents the original Power BI model. The
+> web ETL no longer reads `Redacted Youth Justice Data.xlsx`. It parses TJJD's 58.009
+> response workbook directly (request #42717: Dallas and Tarrant, CY2020 to Aug 2026). See
+> `scripts/etl-tjjd.ts` and CLAUDE.md, "TJJD referral workbook". The ZIP filter is now
+> "drawn on the jurisdiction's ZCTA map", not the 75000–75300 range below.
+
 ### 4.7 TJJD Data (3,400 rows)
 **Years**: 2020-2025
 **`excludeFromModelRefresh`**: true (static)
