@@ -59,3 +59,7 @@ data/generated/**/*.parquet
 
 # Git worktrees
 .worktrees/
+
+# python
+__pycache__/
+*.pyc
