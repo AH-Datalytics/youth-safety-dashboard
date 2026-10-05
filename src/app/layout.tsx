@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Libre_Baskerville, Roboto_Condensed, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/next";
 
 const libreBaskerville = Libre_Baskerville({
   variable: "--font-libre-baskerville",
@@ -40,6 +41,7 @@ export default function RootLayout({
         className={`${libreBaskerville.variable} ${robotoCondensed.variable} ${ibmPlexMono.variable} antialiased`}
       >
         {children}
+        <Analytics />
       </body>
     </html>
   );
