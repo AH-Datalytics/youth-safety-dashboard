@@ -20,7 +20,7 @@ data runs through.
 
 Live at https://youth-safety-dashboards.vercel.app/dallas and `/tarrant`.
 
-Raw source files are not committed to this repository. They are downloaded during the scheduled refresh workflow and transformed into generated files under `data/generated/`.
+Raw source files are not committed to this repository. They are downloaded during the scheduled refresh workflow and transformed into generated files under `data/generated/`. Those generated files are stored on the `data` branch, not `master`; run `npm run fetch-data` after cloning (see "Data Branch" in `CLAUDE.md`).
 
 ## Development
 

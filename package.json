@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "node scripts/fetch-data.mjs && next build",
+    "fetch-data": "node scripts/fetch-data.mjs",
+    "data-status": "bash scripts/data-branch.sh status",
     "start": "next start",
     "lint": "eslint",
     "refresh-data": "tsx scripts/refresh-data.ts"

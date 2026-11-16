@@ -8,6 +8,7 @@ on:
 env:
   NODE_OPTIONS: --max-old-space-size=8192
 
+# Anything else that rewrites the `data` branch must use this same group.
 concurrency:
   group: refresh-data
   cancel-in-progress: false
@@ -32,6 +33,12 @@ jobs:
           cache: 'npm'
 
       - run: npm ci
+
+      # Generated payloads live on the `data` branch, not master. Start from the current
+      # set: an ETL that fails keeps its previous file, and that file must carry over
+      # into the new data commit rather than drop out of it.
+      - name: Fetch current data from the data branch
+        run: node scripts/fetch-data.mjs --ref data
 
       - name: Download source files from OneDrive
         run: npx tsx scripts/download-sharepoint-files.ts
@@ -78,25 +85,14 @@ jobs:
       - name: Run ETL pipelines
         run: npm run refresh-data
 
-      - name: Commit and push data
+      # The generated payloads go to the `data` branch as one replacement commit (see
+      # scripts/data-branch-paths.txt); master gets one small commit updating
+      # data/data-ref.json, the pointer Vercel builds from. Both are pushed atomically,
+      # with rebase-and-retry if master moved mid-run, and the master push is what
+      # triggers the Vercel deploy.
+      - name: Publish data and pointer
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/generated/
-          if git diff --staged --quiet; then
-            echo "No data changes to commit."
-            exit 0
-          fi
-          git commit -m "chore: refresh data $(date -u +%Y-%m-%d)"
-          # Rebase onto any concurrent pushes (e.g. a code change landing
-          # mid-run) before pushing, with a few retries to avoid losing data.
-          for attempt in 1 2 3 4 5; do
-            if git push; then
-              exit 0
-            fi
-            echo "Push rejected (attempt $attempt) — rebasing on latest master..."
-            git pull --rebase --autostash origin master
-            sleep $((attempt * 3))
-          done
-          echo "::error::Failed to push refreshed data after 5 attempts."
-          exit 1
+          export DATA_COMMIT_MSG="chore: refresh data $(date -u +%Y-%m-%d)"
+          bash scripts/data-branch.sh publish

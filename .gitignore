@@ -63,3 +63,8 @@ data/generated/**/*.parquet
 # python
 __pycache__/
 *.pyc
+
+# Generated payloads live on the `data` branch, not master (scripts/data-branch-paths.txt).
+# `npm run fetch-data` puts them here; data/data-ref.json (tracked) pins which snapshot.
+data/generated/*/
+*.fetch-tmp

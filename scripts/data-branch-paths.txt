@@ -1,0 +1,14 @@
+# Files the refresh job regenerates and stores on the `data` branch instead of `master`.
+#
+# One git pathspec per line (globs allowed). Each data commit holds exactly the files
+# that match these lines. Every per-jurisdiction payload is rewritten on every run
+# (all 14 changed in each of the last 31 bot commits), so the whole set moves; a new
+# jurisdiction's folder is picked up by the glob automatically.
+#
+# Deliberately NOT here: data/crosswalks/school-geocodes.json (committed by people via
+# scripts/geocode-schools.ts, not by the refresh) and the data/generated/.gitkeep file.
+#
+# Used by scripts/data-branch.sh (publish, bootstrap). scripts/fetch-data.mjs does not
+# read this file: it downloads exactly the files listed in data/data-ref.json.
+
+data/generated/*/*.json.gz

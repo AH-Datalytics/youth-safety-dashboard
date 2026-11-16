@@ -10,7 +10,7 @@ Registered jurisdictions live in `src/lib/jurisdictions.ts`. Adding one means ad
 
 Live: **https://youth-safety-dashboards.vercel.app** (note the plural; the singular
 `youth-safety-dashboard.vercel.app` does not exist). Vercel deploys on every push to
-`master`, including the nightly bot data commits.
+`master`, including the nightly bot pointer commit (see "Data Branch").
 
 | Jurisdiction | Route | Offense source | Notes |
 |---|---|---|---|
@@ -51,7 +51,8 @@ isn't available per jurisdiction, and what it would take to close each gap.
 3. `scripts/refresh-data.ts` loops the registered jurisdictions and dispatches each
    domain's ETL from the jurisdiction config. Pass a jurisdiction id to run just one:
    `npx tsx scripts/refresh-data.ts tarrant`.
-4. ETL scripts write compact public payloads to `data/generated/{jurisdiction}/`.
+4. ETL scripts write compact public payloads to `data/generated/{jurisdiction}/`. These are
+   **not on `master`**: they live on the `data` branch (see "Data Branch").
 5. The API route at `src/app/api/[jurisdiction]/[domain]/route.ts` serves generated `.json.gz` payloads.
 6. Client hooks in `src/hooks/` fetch those payloads and apply local filters.
 
@@ -142,10 +143,46 @@ boundaries with `python scripts/build-zcta-geojson.py <county GEOID> <slug>`.
 | TJJD | 58.009 request workbook, or statewide county file | `scripts/etl-tjjd.ts` | `/api/{jurisdiction}/tjjd` |
 | Overview | Computed summary | `scripts/compute-overview-summary.ts` | `/api/{jurisdiction}/overview-summary` |
 
+## Data Branch
+
+Generated payloads are not committed to `master`. Committing ~50 MB of regenerated
+`.json.gz` every night grew the repo to ~7.5 GB of history.
+
+| Ref | Holds |
+|-----|-------|
+| `master` | Code, `data/crosswalks/school-geocodes.json`, and **`data/data-ref.json`**: the data commit that is live + every file's git blob hash |
+| `data` | ONE parentless commit with the files matching `scripts/data-branch-paths.txt` (`data/generated/*/*.json.gz`). Replaced by every refresh |
+| `data-yesterday` | The previous snapshot |
+| `data-last-week` | A snapshot 7-13 days old |
+| `data-last-month` | A snapshot 30-59 days old |
+| `data-next-week`, `data-next-month` | Staging slots that feed the two above. Do not use |
+
+- **Build**: `npm run build` runs `scripts/fetch-data.mjs`, which makes `data/` match
+  `data/data-ref.json`, then `next build`. `vercel.json` sets `buildCommand` so Vercel does
+  the same. On Vercel (no `.git`) it downloads each file from
+  `raw.githubusercontent.com/<repo>/<data commit>/<path>` (public repo: no token, and not the
+  rate-limited REST API) and checks every file against its blob hash. Production builds fail
+  rather than ship unpinned data; the previous deployment stays live
+- **Deploys**: the refresh job pushes the data commit and the master pointer commit in one
+  atomic push; the master commit triggers exactly one Vercel deploy. Each data commit carries
+  a `vercel.json` with `deploymentEnabled: false`, so `data*` branches never build
+- **`npx next build` alone does not fetch data.** Use `npm run build`, or `npm run fetch-data` first
+- **Rollback a bad refresh**: on a clean, up-to-date `master`, run
+  `bash scripts/data-branch.sh rollback data-yesterday` (or `data-last-week` / `data-last-month`).
+  One atomic push moves `data` back and commits the matching pointer; Vercel redeploys. If
+  the refresh itself is broken, also `gh workflow disable refresh-data.yml`. Fastest stopgap:
+  Vercel Instant Rollback to the previous deployment
+- A pipeline writing a new file outside `data/generated/<jurisdiction>/*.json.gz` must be added
+  to `scripts/data-branch-paths.txt`, or the runner discards it
+- Never commit generated payloads to `master`, and never commit to `data*` branches by hand
+- Pinned snapshots older than ~2 months may be garbage-collected: rebuilding a very old master
+  commit then fails in production and falls back to the current `data` branch elsewhere
+
 ## Local Development
 
 ```bash
 npm install
+npm run fetch-data   # the generated payloads, from the data branch (pinned by data/data-ref.json)
 npm run dev
 ```
 
@@ -172,5 +209,5 @@ python scripts/prepare-cfs-csv.py
 
 - Compact JSON keys are used in generated payloads, for example `d` for date and `c` for count.
 - Raw source files are excluded from git.
-- Generated `.json.gz` files are committed so the deployed app can serve data without runtime source access.
+- Generated `.json.gz` files are kept on the `data` branch (not `master`) and fetched at build time, so the deployed app serves data without runtime source access.
 - API routes serve raw generated file buffers with cache headers.
