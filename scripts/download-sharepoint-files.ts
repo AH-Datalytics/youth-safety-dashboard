@@ -28,6 +28,8 @@ const FILES: Array<[string, string]> = [
   [`${BASE}/CAMPUS_summary_22.csv`, "data/source/CAMPUS_summary_22.csv"],
   [`${BASE}/CAMPUS_summary_23.csv`, "data/source/CAMPUS_summary_23.csv"],
   [`${BASE}/CAMPUS_summary_24.csv`, "data/source/CAMPUS_summary_24.csv"],
+  [`${BASE}/CAMPUS_summary_25.csv`, "data/source/CAMPUS_summary_25.csv"],
+  [`${BASE}/CAMPUS_summary_26.csv`, "data/source/CAMPUS_summary_26.csv"],
   [`${BASE}/Directory2024.csv`, "data/source/Directory2024.csv"],
   // TJJD 58.009 referral-disposition request (Dallas + Tarrant). The path is a
   // repo variable so a new request can be swapped in without a code change.

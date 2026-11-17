@@ -101,6 +101,26 @@ the routed page renders its notice instead of a fetch error.
   re-cuts of the same actions, and summing them all inflated the card about 20 times until
   2026-09-29.
 
+### TEA CAMPUS discipline files (`scripts/etl-campus.ts`)
+
+- Files are `CAMPUS_summary_YY.csv` in OneDrive `Clients\NLC\Dallas\PowerBI\`, where YY is
+  the school year's end (`_26` = 2025-26), and each must be listed in
+  `scripts/download-sharepoint-files.ts`. Loaded: 2017-18 through 2025-26.
+- **TEA changed the layout with 2024-25:** no `HEADING` column, a new `INDICATOR` column
+  (ACTION / STUDENT / INCIDENT COUNTS), renamed sections, and masked cells as -999 or ranges
+  like `<10`. The ETL maps the new layout onto the old section names the UI reads
+  (`W-REASON INCIDENT COUNTS`, `X-DISCIPLINE ACTION COUNTS`) and drops STUDENT COUNTS rows.
+- **Incident reasons: every TEA reason code counts** (Ben, 2026-11-17), including marijuana/
+  THC, e-cigarettes and the 2025 HB 6 codes the old `XWalk - Discipline.xlsx` never listed.
+  Renamed codes share one label via `DESC_ALIASES`.
+- **Discipline actions use five grouped labels** (in-school suspension, out-of-school
+  suspension, DAEP, expulsion, JJAEP). For the new layout they come from TEA's unmasked
+  campus summary (`B-DISCIPLINE DATA`, ACTION COUNTS), **not** the per-code section J: TEA
+  masks so much of J that 2024-25 suspensions read ~40% below TEA's own totals. Old-layout
+  codes are grouped onto the same labels (`OLD_ACTION_GROUPS`), part-day included.
+  Continuations of prior-year or other-district placements and "mandatory action not taken"
+  are not counted (Ben, 2026-11-17).
+
 ### ArcGIS extraction notes
 
 ArcGIS Feature Service layers cap `maxRecordCount` at 1,000 and ignore a larger

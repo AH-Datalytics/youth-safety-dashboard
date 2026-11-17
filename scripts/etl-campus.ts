@@ -1,6 +1,6 @@
 /**
  * ETL: CAMPUS Disciplinary Data (Local CSVs — TEA format)
- * Source: data/source/CAMPUS_summary_18.csv through CAMPUS_summary_24.csv
+ * Source: data/source/CAMPUS_summary_18.csv through CAMPUS_summary_26.csv (layout changed at _25; see CLAUDE.md)
  * Crosswalk: data/crosswalks/XWalk - Discipline.xlsx
  * Directory: data/source/Directory2024.csv
  * Output: data/generated/campus-data.json(.gz)
@@ -36,7 +36,78 @@ const SY_MAP: Record<string, string> = {
   "22": "2021-2022",
   "23": "2022-2023",
   "24": "2023-2024",
+  "25": "2024-2025",
+  "26": "2025-2026",
 };
+
+const REASON_SECTION = "W-REASON INCIDENT COUNTS";
+const ACTION_SECTION = "X-DISCIPLINE ACTION COUNTS";
+
+/**
+ * TEA's new layout (2024-25 onward) renamed the sections. Incident reasons map straight
+ * onto the old reason section the UI reads.
+ */
+const NEW_REASON_SECTION = "H-REASON INCIDENT COUNTS";
+
+/**
+ * Discipline actions, new layout: TEA masks far more of the per-action-code cells
+ * (section J) than it did before, which made 2024-25 suspensions look ~40% lower than
+ * TEA's own totals. So actions come from the unmasked campus summary (section B,
+ * ACTION COUNTS) instead, and section J is dropped. Ben approved 2026-11-17.
+ * Summary ISS/OSS include part-day suspensions.
+ */
+const NEW_SUMMARY_SECTION = "B-DISCIPLINE DATA";
+const NEW_DROPPED_ACTION_SECTION = "J-DISCIPLINE ACTION";
+const SUMMARY_ACTIONS: Record<string, string> = {
+  "IN SCHOOL SUSPENSIONS": "In-School Suspension",
+  "OUT OF SCHOOL SUSPENSIONS": "Out-of-School Suspension",
+  "DAEP PLACEMENTS": "DAEP Placement",
+  EXPULSIONS: "Expulsion",
+  "JJAEP PLACEMENTS": "JJAEP Placement",
+};
+
+/**
+ * Old-layout action codes grouped onto the same five labels, so the series is continuous.
+ * Codes not listed (continuations of prior-year or other-district placements, and
+ * "mandatory action not taken") are not new discipline actions and are not counted.
+ */
+const OLD_ACTION_GROUPS: Record<string, string> = {
+  "06": "In-School Suspension",
+  "26": "In-School Suspension", // part day
+  "05": "Out-of-School Suspension",
+  "25": "Out-of-School Suspension", // part day
+  "07": "DAEP Placement",
+  "14": "DAEP Placement", // court ordered
+  "54": "DAEP Placement", // SPED hearing
+  "01": "Expulsion",
+  "03": "Expulsion",
+  "04": "Expulsion",
+  "50": "Expulsion",
+  "52": "Expulsion",
+  "53": "Expulsion",
+  "02": "JJAEP Placement",
+  "13": "JJAEP Placement",
+  "51": "JJAEP Placement",
+  "60": "JJAEP Placement",
+};
+
+/** Renamed or recoded TEA headings → one display label, so trends stay continuous. */
+const DESC_ALIASES: Record<string, string> = {
+  "06-ABUSABLE VOLATILE CHEMICAL": "Abuse Of A Volatile Chemical",
+  "04-CONTROL SUB/DRUGS UNTIL 9/1/23": "Controlled Substance/Drugs",
+  "62-MARIHUANA OR THC": "Marijuana or THC",
+  "63-E-CIGARETTE": "E-Cigarette - Possess or Use",
+  "67-POSSESSES OR USES E-CIGARETTE": "E-Cigarette - Possess or Use",
+  "68-SELL GIVE DELIVERS E-CIGARETT": "E-Cigarette - Sell, Give or Deliver",
+};
+
+/** "65-THREAT IMMED SAFE STUDNT CLASS" → "Threat Immed Safe Studnt Class" */
+function titleFromHeading(h: string): string {
+  return h
+    .replace(/^\d+-/, "")
+    .toLowerCase()
+    .replace(/\b[a-z]/g, (c) => c.toUpperCase());
+}
 
 interface DirectoryEntry {
   campusNumber: number;
@@ -210,6 +281,10 @@ export async function runCampusETL(config?: CampusETLConfig): Promise<CampusPayl
     const sectionIdx = colIdx["SECTION"] ?? -1;
     const headingIdx = colIdx["HEADING"] ?? -1;
     const headnameIdx = colIdx["HEADNAME"] ?? colIdx["HEADING NAME"] ?? -1;
+    // TEA changed the layout with 2025-26: the HEADING code column is gone, an INDICATOR
+    // column splits each row into ACTION / STUDENT / INCIDENT counts, and sections were
+    // renamed. Rows are normalized back onto the old section names the UI reads.
+    const indicatorIdx = colIdx["INDICATOR"] ?? -1;
 
     for (let i = SKIP_ROWS + 1; i < lines.length; i++) {
       const line = lines[i].trim();
@@ -240,13 +315,47 @@ export async function runCampusETL(config?: CampusETLConfig): Promise<CampusPayl
       const value = parseInt(valueStr);
       if (isNaN(value) || value === -999 || value === 0) continue; // -999 = null sentinel
 
-      const section = sectionIdx >= 0 ? (values[sectionIdx] ?? "").trim() : "";
-      const headingName = headnameIdx >= 0 ? (values[headnameIdx] ?? "").trim() : "";
+      let section = sectionIdx >= 0 ? (values[sectionIdx] ?? "").trim() : "";
+      // Some TEA files carry a 0x1A substitute byte where a character failed to encode
+      // (e.g. "61-BULLYING \x1a TEC 37.0052(B)"); drop it so the crosswalk key matches.
+      const headingName =
+        headnameIdx >= 0 ? (values[headnameIdx] ?? "").replace(/\x1a/g, "").trim() : "";
 
-      // Crosswalk join
-      const dEntry = disciplineXwalk.get(headingName);
-      const type = dEntry?.type || "";
-      const description = dEntry?.description || headingName;
+      let type: string;
+      let description: string;
+      if (indicatorIdx >= 0 && section === NEW_SUMMARY_SECTION) {
+        // New layout: actions come from the unmasked campus summary (see SUMMARY_ACTIONS).
+        const label = SUMMARY_ACTIONS[headingName];
+        if ((values[indicatorIdx] ?? "").trim() !== "ACTION COUNTS" || !label) continue;
+        section = ACTION_SECTION;
+        type = "Incident Type";
+        description = label;
+      } else {
+        if (indicatorIdx >= 0) {
+          // Student counts are distinct students, not actions: keep one count per row.
+          if ((values[indicatorIdx] ?? "").trim() === "STUDENT COUNTS") continue;
+          if (section === NEW_DROPPED_ACTION_SECTION) continue;
+          if (section === NEW_REASON_SECTION) section = REASON_SECTION;
+        }
+        const dEntry = disciplineXwalk.get(headingName);
+        if (section === ACTION_SECTION) {
+          // Old layout: group action codes onto the summary labels; skip the rest.
+          const label = OLD_ACTION_GROUPS[headingName.slice(0, 2)];
+          if (!label) continue;
+          type = "Incident Type";
+          description = label;
+        } else if (section === REASON_SECTION) {
+          // Every reason code counts, including codes the crosswalk predates (marijuana/THC,
+          // e-cigarettes, the 2025 HB 6 codes). Ben approved 2026-11-17. DESC_ALIASES keeps
+          // renamed codes on one row so year-over-year trends line up.
+          type = "Incident Type";
+          description =
+            DESC_ALIASES[headingName] || dEntry?.description || titleFromHeading(headingName);
+        } else {
+          type = dEntry?.type || "";
+          description = dEntry?.description || headingName;
+        }
+      }
 
       const dirEntry = directory.get(campusNumber);
       const campusName = dirEntry?.schoolName || `Campus ${campusNumber}`;
