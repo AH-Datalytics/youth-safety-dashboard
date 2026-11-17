@@ -85,6 +85,12 @@ the routed page renders its notice instead of a fetch error.
   cover page dropdowns (z-50).
 - **Offense Type filter on the map** filters dots by offense group or crime-against. Points
   carry no NIBRS code, so the map's tree stops at group level.
+- **Dallas incidents source:** `prepare-incidents-parquet.py` pages the SODA API
+  (`/resource/qv6i-rri7.csv`) for only the 22 columns it reads, 2017 onward, 4 pages in
+  parallel, each page retried on its own (~3-4 min). Until 2026-11-17 it pulled the full
+  bulk export (1.4 GB, 86 columns, all years), which took 5 to 70+ minutes depending on the
+  portal and restarted from zero on any dropped connection; two nightly runs hit the
+  90-minute limit. Output was verified identical. `INCIDENTS_SOURCE=bulk` falls back to it.
 - **Offense point coordinates:** Dallas's location text is `(lat, lon)` and GeoJSON is
   `[lon, lat]`. `extract_lonlat` in `prepare-incidents-parquet.py` (the path CI uses)
   orders the pair by sign (western hemisphere: longitude negative). A swap here leaves the

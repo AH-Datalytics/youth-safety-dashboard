@@ -13,10 +13,13 @@ Output:
   data/generated/police-incidents.parquet
 """
 
+import csv
+import io
 import os
 import re
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 try:
@@ -35,6 +38,18 @@ except ImportError:
 
 # Dallas Open Data — Police Incidents CSV export
 CSV_URL = "https://www.dallasopendata.com/api/views/qv6i-rri7/rows.csv?accessType=DOWNLOAD"
+# SODA API: only the columns read below, paged. Set INCIDENTS_SOURCE=bulk to fall
+# back to the full CSV export.
+SODA_URL = "https://www.dallasopendata.com/resource/qv6i-rri7.csv"
+SODA_META_URL = "https://www.dallasopendata.com/api/views/qv6i-rri7.json"
+SODA_PAGE = 25000  # 50K pages have drawn 500s from this portal
+SODA_WORKERS = 4
+SODA_FIELDS = [
+    "incidentnum", "date1", "date2_of_occurrence_2", "time1", "reporteddate", "edate",
+    "callorgdate", "callreceived", "callcleared", "calldispatched", "ucr_disp", "gang",
+    "drug", "nibrs_code", "nibrs_type", "nibrs_crime", "nibrs_crime_category",
+    "nibrs_crimeagainst", "division", "zip_code", "geocoded_column", "offincident",
+]
 OUTPUT_DIR = Path("data/generated")
 OUTPUT_FILE = OUTPUT_DIR / "police-incidents.parquet"
 DATE_FLOOR = "2017-01-01"
@@ -123,6 +138,85 @@ def download_csv(url: str, dest: Path, attempts: int = 5) -> None:
     raise RuntimeError(f"CSV download failed after {attempts} attempts: {last_err}")
 
 
+def _get_with_retry(url: str, params: dict, attempts: int = 6) -> requests.Response:
+    last_err = None
+    for attempt in range(1, attempts + 1):
+        if attempt > 1:
+            backoff = min(5 * 2 ** (attempt - 2), 60)
+            print(f"    retry {attempt - 1}/{attempts - 1} after {backoff}s ({last_err})")
+            time.sleep(backoff)
+        try:
+            resp = requests.get(url, params=params, timeout=(30, 300))
+            resp.raise_for_status()
+            return resp
+        except requests.exceptions.RequestException as e:
+            last_err = e
+    raise RuntimeError(f"Socrata request failed after {attempts} attempts: {last_err}")
+
+
+def fetch_soda_csv(dest: Path) -> None:
+    """Page the SODA API for only the columns this script reads, 2017 onward.
+
+    Replaces the full bulk export (1.4 GB, all 86 columns, every year), whose speed
+    swung from 5 to 70+ minutes and which restarted from zero on any dropped
+    connection, pushing the nightly refresh past its 90-minute limit (Nov 2026).
+    Each page retries on its own. Headers are renamed back to the bulk export's
+    display names so everything downstream reads the file unchanged.
+    """
+    meta = _get_with_retry(SODA_META_URL, {}).json()
+    by_field = {c["fieldName"]: c["name"] for c in meta["columns"]}
+    missing = [f for f in SODA_FIELDS if f not in by_field]
+    if missing:
+        raise RuntimeError(f"Dallas incidents dataset no longer has fields: {missing}")
+
+    where = f"date1 >= '{DATE_FLOOR}'"
+    expected = int(_get_with_retry(SODA_URL.replace(".csv", ".json"),
+                                   {"$select": "count(*)", "$where": where}).json()[0]["count"])
+    print(f"Fetching {expected:,} rows x {len(SODA_FIELDS)} columns from the SODA API...")
+
+    def fetch_page(page: int) -> list[list[str]]:
+        params = {
+            "$select": ",".join(SODA_FIELDS),
+            "$where": where,
+            "$order": ":id",
+            "$limit": SODA_PAGE,
+            "$offset": page * SODA_PAGE,
+        }
+        rows = list(csv.reader(io.StringIO(_get_with_retry(SODA_URL, params).text)))
+        header, body = rows[0], rows[1:]
+        if header != SODA_FIELDS:
+            idx = [header.index(c) for c in SODA_FIELDS]
+            body = [[r[i] for i in idx] for r in body]
+        return body
+
+    started = time.time()
+    written = 0
+    with open(dest, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow([by_field[c] for c in SODA_FIELDS])
+        # Fetch the pages the count calls for in parallel, written in order; then keep
+        # going one page at a time in case rows were added after the count.
+        n_pages = expected // SODA_PAGE + 1
+        with ThreadPoolExecutor(max_workers=SODA_WORKERS) as pool:
+            for page, body in enumerate(pool.map(fetch_page, range(n_pages))):
+                writer.writerows(body)
+                written += len(body)
+                if (page + 1) % 10 == 0:
+                    print(f"  {written:,}/{expected:,} rows ({time.time() - started:.0f}s)", flush=True)
+        page = n_pages
+        while len(body) == SODA_PAGE:
+            body = fetch_page(page)
+            writer.writerows(body)
+            written += len(body)
+            page += 1
+
+    # Rows can be added between the count and the last page; a large shortfall
+    # means pages were lost.
+    if written < expected * 0.99:
+        raise RuntimeError(f"SODA fetch returned {written:,} rows, expected ~{expected:,}")
+    print(f"  Fetched {written:,} rows in {time.time() - started:.0f}s")
+
+
 def main():
     print("=== Dallas Police Incidents — CSV to Parquet ===")
 
@@ -131,7 +225,10 @@ def main():
     # streamed download with backoff.
     tmp_csv = OUTPUT_DIR / "_incidents_download.csv"
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    download_csv(CSV_URL, tmp_csv)
+    if os.environ.get("INCIDENTS_SOURCE", "soda").lower() == "bulk":
+        download_csv(CSV_URL, tmp_csv)
+    else:
+        fetch_soda_csv(tmp_csv)
 
     # Read CSV
     print("Reading CSV...")
