@@ -169,6 +169,15 @@ boundaries with `python scripts/build-zcta-geojson.py <county GEOID> <slug>`.
 | TJJD | 58.009 request workbook, or statewide county file | `scripts/etl-tjjd.ts` | `/api/{jurisdiction}/tjjd` |
 | Overview | Computed summary | `scripts/compute-overview-summary.ts` | `/api/{jurisdiction}/overview-summary` |
 
+## Repository history (read before touching source files)
+
+This repository was rebuilt on 2026-11-18. An early commit had stored raw client source files in Git LFS; deleting them from the tree did not remove them from GitHub, and they stayed downloadable from the public repo. The repo was recreated under the same name with the same history and no LFS objects, and the old copy was deleted. Old commits still show LFS pointer files under `data/source/`; they point at nothing.
+
+- Never commit source files, and never add Git LFS to this repo. Source files live in OneDrive and are downloaded at run time.
+- The refresh needs four repo secrets (`SHAREPOINT_CLIENT_ID`, `SHAREPOINT_CLIENT_SECRET`, `SHAREPOINT_TENANT_ID`, `SHAREPOINT_DRIVE_ID`) and two repo variables (`SHAREPOINT_SOURCE_BASE_PATH`, `SHAREPOINT_TJJD_FILE_PATH`).
+- Setting a variable whose value starts with `/` from Git Bash rewrites it to `C:/Program Files/Git/...`. Run `export MSYS_NO_PATHCONV=1` first, or set it in the GitHub web page.
+- The Vercel project is `youth-safety-dashboards` (with an s). Running `vercel git connect` in a folder with no `.vercel/` creates a second project.
+
 ## Data Branch
 
 Generated payloads are not committed to `master`. Committing ~50 MB of regenerated
