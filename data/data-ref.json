@@ -1,20 +1,20 @@
 {
-  "commit": "79e8eebb606dcbc3b93845904ea21eb13f06ad1e",
-  "created": "2026-11-18T12:49:52Z",
+  "commit": "d24974f3d1c64795e62947dd286b9a26ece011fc",
+  "created": "2026-11-18T15:43:31Z",
   "files": {
-    "data/generated/dallas/311-data.json.gz": "ac2d672f03e7c463188ea91cd41c0f91a0410c6f",
-    "data/generated/dallas/arrests-data.json.gz": "f9f60bb37669b5f1a686ff987eec0fead0afcf0a",
-    "data/generated/dallas/campus-data.json.gz": "b3ca63473f93ee1618d2687647a1864ca24d4bd9",
-    "data/generated/dallas/cfs-data.json.gz": "f5bd71e4a860610bff729f8acae4e2de3f16cf1c",
-    "data/generated/dallas/incidents-data.json.gz": "60e199da7640172720fc581849dc51868b008e75",
-    "data/generated/dallas/overview-summary-data.json.gz": "7725e45906272f6952020066b7e0bf65da174b4c",
-    "data/generated/dallas/tjjd-data.json.gz": "58927432f2fd480231e5992d21d1813dd182645d",
-    "data/generated/tarrant/311-data.json.gz": "3bd42c4020a3465cf5c8f27df17f7c20cfa0b243",
-    "data/generated/tarrant/arrests-data.json.gz": "8c87a546822ee6683e5fffa69188348632e91bc0",
-    "data/generated/tarrant/campus-data.json.gz": "65e350a98bd511203fd0691d402807d3152c1852",
-    "data/generated/tarrant/cfs-data.json.gz": "ae697008498423abfe63569784cab00d3edbb1f1",
-    "data/generated/tarrant/incidents-data.json.gz": "7f0fb92e24921aff48e8a26afd25a8baef68ae66",
-    "data/generated/tarrant/overview-summary-data.json.gz": "03137c68a600e084210bc044a5c5100209fb1712",
-    "data/generated/tarrant/tjjd-data.json.gz": "50686db42be2bea7a1773b403b883af5686982ba"
+    "data/generated/dallas/311-data.json.gz": "ff7c0b1eb4d7ca3920efc13f67799c9a6b250441",
+    "data/generated/dallas/arrests-data.json.gz": "e6d2203baab600a3d582c7e8dc022632e0669a9a",
+    "data/generated/dallas/campus-data.json.gz": "58f5effa03f75124f10206b01d8087f2b87fdbc0",
+    "data/generated/dallas/cfs-data.json.gz": "7668a919677656d6c7b8a917cdefc0190a1a67e9",
+    "data/generated/dallas/incidents-data.json.gz": "a396991cc3cb72bc0116f9b6e7b9ee0ad993e8d7",
+    "data/generated/dallas/overview-summary-data.json.gz": "b971fd8beca4980a563cbdd4d4ea58656201a11c",
+    "data/generated/dallas/tjjd-data.json.gz": "0d9c98fc7bc3b36f36dc5d1a1d5489426c129365",
+    "data/generated/tarrant/311-data.json.gz": "91348b518cfe5d7f9dfc395554edc2298bbca71d",
+    "data/generated/tarrant/arrests-data.json.gz": "2443845ab22116eff27720c827589600126374e7",
+    "data/generated/tarrant/campus-data.json.gz": "2ee76f266481809679387baeed46ffdd73301a76",
+    "data/generated/tarrant/cfs-data.json.gz": "7b8ad0286ed9ee68f5b3f8f80473978eac5f6b5b",
+    "data/generated/tarrant/incidents-data.json.gz": "e71859e0d8927d73cdb005ff0d7c96900db272bb",
+    "data/generated/tarrant/overview-summary-data.json.gz": "94a1a781d1f3a8d45b8f876f583169e115d4895a",
+    "data/generated/tarrant/tjjd-data.json.gz": "c1f9ea4fe998e9ec0532e4c10911c568cbe224b0"
   }
 }
