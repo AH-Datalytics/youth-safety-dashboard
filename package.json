@@ -12,7 +12,7 @@
     "refresh-data": "tsx scripts/refresh-data.ts"
   },
   "dependencies": {
-    "@azure/msal-node": "^5.0.5",
+    "@azure/msal-node": "^7.1.2",
     "@vercel/analytics": "^2.0.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
